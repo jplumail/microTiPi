@@ -55,6 +55,8 @@ lib*.a
 *.txz
 *.xz
 *.zip
+*.war
+*.ear
 
 # Logs and databases #
 ######################
@@ -70,3 +72,5 @@ Icon?
 Thumbs.db
 .directory
 
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
