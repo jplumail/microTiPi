@@ -26,7 +26,6 @@ import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.old.MathUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 
 public class WideFieldModel extends MicroscopeModel{
 
@@ -131,7 +130,6 @@ public class WideFieldModel extends MicroscopeModel{
      * h_k(z) = |a_k(z)|² = |Σ_j F_{j,k} A_j(z)|²
      */
 
-    @SuppressWarnings("unused")
     @Override
     public void computePSF(){
 
@@ -150,7 +148,7 @@ public class WideFieldModel extends MicroscopeModel{
             ExecutorService service = Executors.newFixedThreadPool(threads);
 
             List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
-            ConcurrencyUtils.setNumberOfThreads(1);
+            //    ConcurrencyUtils.setNumberOfThreads(1);
             for ( int iz = 0; iz < Nz; iz++)
             {
                 final int iz1 = iz;
@@ -226,7 +224,7 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
-                ConcurrencyUtils.setNumberOfThreads(1);
+                //      ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final int iz1 = iz;
@@ -371,7 +369,7 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-                ConcurrencyUtils.setNumberOfThreads(1);
+                //       ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
@@ -384,7 +382,6 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             double Aq[] = new double[2*Npix];
-                            double defoc;
                             ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
 
                             if (iz1 > Nz/2)
@@ -416,7 +413,6 @@ public class WideFieldModel extends MicroscopeModel{
                                     int in = i + j*Nx;
                                     if(maskPupil[in] == 1)
                                     {
-                                        double idef= 1./psi[in];
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
                                         for (int k = 0; k < modulusSpace.getNumber(); k++)
@@ -538,7 +534,7 @@ public class WideFieldModel extends MicroscopeModel{
             ExecutorService service = Executors.newFixedThreadPool(threads);
 
             List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-            ConcurrencyUtils.setNumberOfThreads(1);
+            //        ConcurrencyUtils.setNumberOfThreads(1);
             for ( int iz = 0; iz < Nz; iz++)
             {
 
@@ -551,7 +547,6 @@ public class WideFieldModel extends MicroscopeModel{
 
                         double defoc_scale=0;
                         double Aq[] = new double[2*Npix];
-                        double defoc;
                         ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
 
                         if (iz1 > Nz/2)
@@ -741,7 +736,7 @@ public class WideFieldModel extends MicroscopeModel{
             ExecutorService service = Executors.newFixedThreadPool(threads);
 
             List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
-            ConcurrencyUtils.setNumberOfThreads(1);
+            //  ConcurrencyUtils.setNumberOfThreads(1);
             for ( int iz = 0; iz < Nz; iz++)
             {
 
