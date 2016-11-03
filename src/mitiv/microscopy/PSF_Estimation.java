@@ -36,7 +36,6 @@ import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.FloatShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.old.MathUtils;
 import mitiv.optim.BoundProjector;
 import mitiv.optim.LineSearch;
 import mitiv.optim.MoreThuenteLineSearch;
@@ -215,33 +214,6 @@ public class PSF_Estimation  {
         while (run) {
             if (task == OptimTask.COMPUTE_FG) {
                 pupil.setParam(x);
-                /*            if(flag == DEFOCUS)
-                {
-                    if (debug) {
-                        System.out.println("--------------");
-                        System.out.println("defocus");
-                        MathUtils.printArray(x.getData());
-                    }
-                    pupil.setDefocus(x);
-                }
-                else if (flag == ALPHA)
-                {
-                    if (debug) {
-                        System.out.println("--------------");
-                        System.out.println("alpha");
-                        MathUtils.printArray(x.getData());
-                    }
-                    pupil.setPhase(x );
-                }
-                else if(flag == BETA)
-                {
-                    if (debug) {
-                        System.out.println("--------------");
-                        System.out.println("beta");
-                        MathUtils.printArray(x.getData());
-                    }
-                    pupil.setModulus(x );
-                }*/
 
                 pupil.computePSF();
 
@@ -255,34 +227,8 @@ public class PSF_Estimation  {
                         System.out.println("Cost: " + best_cost);
                     }
                 }
-                if(flag == DEFOCUS)
-                {
-                    gX =  pupil.apply_J_defocus(gcost);
-                    if (debug) {
-                        System.out.println("grdx");
-                        //   MathUtils.stat(gcost.getData());
-                        System.out.println("grd");
-                        MathUtils.printArray(gX.getData());
-                    }
-                }
-                else if (flag == ALPHA)
-                {
-                    gX =  pupil.apply_J_phi(gcost);
-                    if (debug) {
-                        System.out.println("grd");
-                        MathUtils.printArray(gX.getData());
-                    }
-                }
-                else if(flag == BETA)
-                {
-                    gX =  pupil.apply_J_modulus(gcost);
-                    if (debug) {
-                        System.out.println("grdx");
-                        //     MathUtils.stat(gcost.getData());
-                        System.out.println("grd");
-                        MathUtils.printArray(gX.getData());
-                    }
-                }
+                gX =  pupil.apply_Jacobian(gcost);
+
             } else if (task == OptimTask.NEW_X || task == OptimTask.FINAL_X) {
                 /*   if (viewer != null) {
                     viewer.display(this);
