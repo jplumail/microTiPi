@@ -146,7 +146,9 @@ public abstract class MicroscopeModel
         }
     }
 
-
+    public void setSingle(boolean single){
+        this.single = single;
+    }
 
 
 }

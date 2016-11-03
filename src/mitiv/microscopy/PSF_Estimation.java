@@ -30,8 +30,6 @@ import mitiv.array.DoubleArray;
 import mitiv.array.ShapedArray;
 import mitiv.base.Shape;
 import mitiv.deconv.WeightedConvolutionCost;
-import mitiv.invpb.ReconstructionJob;
-import mitiv.invpb.ReconstructionViewer;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.old.MathUtils;
@@ -42,7 +40,7 @@ import mitiv.optim.OptimTask;
 import mitiv.optim.ReverseCommunicationOptimizer;
 import mitiv.optim.VMLMB;
 
-public class PSF_Estimation implements ReconstructionJob {
+public class PSF_Estimation  {
 
     private double gatol = 0.0;
     private double grtol = 1e-3;
@@ -60,7 +58,7 @@ public class PSF_Estimation implements ReconstructionJob {
     private DoubleShapedVector gcost = null;
     private MicroscopeModel pupil = null;
     private ReverseCommunicationOptimizer minimizer = null;
-    private ReconstructionViewer viewer = null;
+    //   private ReconstructionViewer viewer = null;
     private DoubleArray weights = null;
 
     public static final int DEFOCUS = 1;
@@ -273,9 +271,9 @@ public class PSF_Estimation implements ReconstructionJob {
                     }
                 }
             } else if (task == OptimTask.NEW_X || task == OptimTask.FINAL_X) {
-                if (viewer != null) {
+                /*   if (viewer != null) {
                     viewer.display(this);
-                }
+                }*/
                 boolean stop = (task == OptimTask.FINAL_X);
                 if (! stop && maxiter >= 0 && minimizer.getIterations() >= maxiter) {
                     if (debug){
@@ -355,7 +353,7 @@ public class PSF_Estimation implements ReconstructionJob {
     public void setRelativeTolerance(double value) {
         grtol = value;
     }
-    @Override
+    //  @Override
     public double getRelativeTolerance() {
         return grtol;
     }
@@ -375,12 +373,12 @@ public class PSF_Estimation implements ReconstructionJob {
     public void setWeight(DoubleArray W){
         this.weights = W;
     }
-    public ReconstructionViewer getViewer() {
+    /* public ReconstructionViewer getViewer() {
         return viewer;
     }
     public void setViewer(ReconstructionViewer rv) {
         viewer = rv;
-    }
+    }*/
     public void setPupil(MicroscopeModel pupil) {
         this.pupil = pupil;
     }
@@ -402,7 +400,7 @@ public class PSF_Estimation implements ReconstructionJob {
         this.psf = psf;
     }
 
-    @Override
+    // @Override
     public DoubleArray getResult() {
         /* Nothing else to do because the actual result is in a vector
          * which shares the contents of the ShapedArray.  Otherwise,
@@ -414,32 +412,32 @@ public class PSF_Estimation implements ReconstructionJob {
         this.result = result;
     }
 
-    @Override
+    // @Override
     public int getIterations() {
         return (minimizer == null ? 0 : minimizer.getIterations());
     }
 
-    @Override
+    //   @Override
     public int getEvaluations() {
         return (minimizer == null ? 0 : minimizer.getEvaluations());
     }
 
-    @Override
+    //  @Override
     public double getCost() {
         return fcost;
     }
 
-    @Override
+    //  @Override
     public double getGradientNorm2() {
         return (gcost == null ? 0.0 : gcost.norm2());
     }
 
-    @Override
+    //   @Override
     public double getGradientNorm1() {
         return (gcost == null ? 0.0 : gcost.norm1());
     }
 
-    @Override
+    //   @Override
     public double getGradientNormInf() {
         return (gcost == null ? 0.0 : gcost.normInf());
     }
