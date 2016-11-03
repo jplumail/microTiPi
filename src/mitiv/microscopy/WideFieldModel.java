@@ -12,7 +12,6 @@ import java.util.concurrent.Future;
 import org.jtransforms.fft.DoubleFFT_2D;
 import org.jtransforms.fft.FloatFFT_2D;
 
-import mitiv.array.Array1D;
 import mitiv.array.Array3D;
 import mitiv.array.Array4D;
 import mitiv.array.Double1D;
@@ -40,7 +39,8 @@ public class WideFieldModel extends MicroscopeModel{
     protected double radius; // radius of the pupil in meter
     protected double pupil_area; // area of the pupil
     protected double[] Z; // Zernike polynomials basis
-    protected double[] maskPupil; // position in the where the pupil is non null
+    protected boolean[] maskPupil; // position in the where the pupil is non null including vigneting
+    protected boolean[] mapPupil; // position in the where the pupil is non null
     protected double[] rho; // pupil modulus based on Zernike polynomials
     protected double[] phi; // pupil phase based on Zernike polynomials
     protected double[] psi; // defocus function
@@ -66,7 +66,6 @@ public class WideFieldModel extends MicroscopeModel{
 
     public WideFieldModel(Shape psfShape,int nPhase, int nModulus,
             double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single) {
-        // TODO Check size of input vectors.
 
         super(psfShape,  NA,  ni, dxy, dz,  radial, single);
         if(Nx != Ny){
@@ -271,7 +270,6 @@ public class WideFieldModel extends MicroscopeModel{
 
                 service.shutdown();
 
-                //    List<Output> outputs = new ArrayList<Output>();
                 for (Future<GetPsfParaOut> future : futures) {
                     GetPsfParaOut output;
                     try {
@@ -352,19 +350,152 @@ public class WideFieldModel extends MicroscopeModel{
         final int Npix = Nx*Ny;
         double defoc_scale = 0.;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
-        double Aq[] = new double[2*Npix];
+        //   double Aq[] = new double[2*Npix];
         double J[] = new double[Ny*Nx];
         final double NBeta =1./modulus_coefs.norm2();
-        Array1D JRho = null;
+        Double1D JRho =  Double1D.create(modulusSpace.getShape());
+
+        JRho.fill(0.);
 
         if(single){
+            if(para){
+                int threads = Runtime.getRuntime().availableProcessors();
+                ExecutorService service = Executors.newFixedThreadPool(threads);
+
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                //       ConcurrencyUtils.setNumberOfThreads(1);
+                for ( int iz = 0; iz < Nz; iz++)
+                {
+
+                    final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+                    Callable<ApplyJPhaOut> callable = new Callable<ApplyJPhaOut>() {
+                        @Override
+                        public ApplyJPhaOut call() throws Exception {
+
+
+                            double defoc_scale=0;
+                            float Aq[] = new float[2*Npix];
+                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+
+                            if (iz1 > Nz/2)
+                            {
+                                defoc_scale = DEUXPI*(iz1 - Nz)*dz;
+                            }
+                            else
+                            {
+                                defoc_scale = DEUXPI*iz1*dz;
+                            }
+                            for (int iy = 0; iy < Ny; iy++){
+                                for (int ix = 0; ix < Nx; ix++){
+                                    int in = (ix+Nx*iy);
+                                    float qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                }
+
+                            }
+
+                            /* Fourier transform of the pupil function A(z) */
+                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
+
+
+                            for (int j = 0; j < Ny; j++)
+                            {
+                                for (int i = 0; i < Nx; i++)
+                                {
+                                    int in = i + j*Nx;
+                                    if(maskPupil[in] )
+                                    {
+                                        double ph = phi[in] + defoc_scale*psi[in];
+                                        double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
+                                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                                        {
+                                            int Ci= k*Npix + in;
+                                            pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta;
+                                        }
+                                    }
+                                }
+                            }
+
+
+                            return  pout;
+                        }
+                    };
+                    futures.add(service.submit(callable));
+                }
+
+                service.shutdown();
+
+                //    List<Output> outputs = new ArrayList<Output>();
+                for (Future<ApplyJPhaOut> future : futures) {
+                    ApplyJPhaOut pout;
+                    try {
+                        pout = future.get();
+                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                        {
+                            JRho.set(k,JRho.get(k)+ pout.grd[k]);
+                        }
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+                //  DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+
+                for (int iz = 0; iz < Nz; iz++)
+                {
+
+                    float Aq[] = new float[2*Npix];
+                    if (iz > Nz/2)
+                    {
+                        defoc_scale = DEUXPI*(iz - Nz)*dz;
+                    }
+                    else
+                    {
+                        defoc_scale = DEUXPI*iz*dz;
+                    }
+
+                    for (int iy = 0; iy < Ny; iy++){
+                        for (int ix = 0; ix < Nx; ix++){
+                            int in = (ix+Nx*iy);
+                            float qin =  ((Float3D) q.asShapedArray()).get(ix, iy, iz);
+                            Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz )*qin;
+                            Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                        }
+
+                    }
+
+
+                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
+
+                    for (int in = 0; in < Npix; in++)
+                    {
+                        Ci = iz*Npix + in;
+                        double ph = phi[in] + defoc_scale*psi[in];
+                        J[in] = J[in] + Aq[2*in]*Math.cos(ph) - Aq[2*in + 1]*Math.sin(ph);
+                    }
+
+                }
+
+                for (int k = 0; k < modulusSpace.getNumber(); k++)
+                {
+                    double tmp = 0;
+                    for (int in = 0; in < Npix; in++)
+                    {
+                        Ci = k*Npix + in;
+                        tmp += J[in]*Z[Ci];
+                    }
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.norm2()*NBeta,2))*NBeta);
+                }
+            }
 
         }else{
-            JRho =  Double1D.create(modulusSpace.getShape());
-
-            ((Double1D) JRho).fill(0.);
             if(para){
-                //  final Double3D q1 = ((Double3D) q.asShapedArray());
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
@@ -411,7 +542,7 @@ public class WideFieldModel extends MicroscopeModel{
                                 for (int i = 0; i < Nx; i++)
                                 {
                                     int in = i + j*Nx;
-                                    if(maskPupil[in] == 1)
+                                    if(maskPupil[in] )
                                     {
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
@@ -433,14 +564,13 @@ public class WideFieldModel extends MicroscopeModel{
 
                 service.shutdown();
 
-                //    List<Output> outputs = new ArrayList<Output>();
                 for (Future<ApplyJPhaOut> future : futures) {
                     ApplyJPhaOut pout;
                     try {
                         pout = future.get();
                         for (int k = 0; k < modulusSpace.getNumber(); k++)
                         {
-                            ((Double1D) JRho).set(k,((Double1D) JRho).get(k)+ pout.grd[k]);
+                            JRho.set(k,JRho.get(k)+ pout.grd[k]);
                         }
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
@@ -453,6 +583,7 @@ public class WideFieldModel extends MicroscopeModel{
             }else{
                 DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
 
+                double Aq[] = new double[2*Npix];
                 for (int iz = 0; iz < Nz; iz++)
                 {
 
@@ -464,17 +595,6 @@ public class WideFieldModel extends MicroscopeModel{
                     {
                         defoc_scale = DEUXPI*iz*dz;
                     }
-                    /*      for (int in = 0; in < Npix; in++)
-                {
-                    Ci = iz*Npix + in;
-                    //   Aq[2*in] = cpxPsf[2*Ci]*q[Ci];
-                    //   Aq[2*in + 1] = cpxPsf[2*Ci + 1]*q[Ci];
-                    Double3D cpxPsfZ = (Double3D) cpxPsf.slice(iz);
-                    Double1D qZ = ((Double3D) q.asShapedArray()).slice(iz).as1D();
-                    Aq[2*in] =   cpxPsfZ.slice(0, 0).as1D().get(in)*qZ.get(in);
-                    Aq[2*in + 1] = cpxPsfZ.slice(1, 0).as1D().get(in)*qZ.get(in);
-
-                }*/
 
                     for (int iy = 0; iy < Ny; iy++){
                         for (int ix = 0; ix < Nx; ix++){
@@ -506,7 +626,7 @@ public class WideFieldModel extends MicroscopeModel{
                         Ci = k*Npix + in;
                         tmp += J[in]*Z[Ci];
                     }
-                    ((Double1D) JRho).set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.norm2()*NBeta,2))*NBeta);
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.norm2()*NBeta,2))*NBeta);
                 }
             }
         }
@@ -528,160 +648,292 @@ public class WideFieldModel extends MicroscopeModel{
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
         Double1D JPhi =  Double1D.create(phaseSpace.getShape());
         JPhi.fill(0.);
-        if(para){
-            //  final Double3D q1 = ((Double3D) q.asShapedArray());
-            int threads = Runtime.getRuntime().availableProcessors();
-            ExecutorService service = Executors.newFixedThreadPool(threads);
+        if(single){
+            if(para){
+                int threads = Runtime.getRuntime().availableProcessors();
+                ExecutorService service = Executors.newFixedThreadPool(threads);
 
-            List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-            //        ConcurrencyUtils.setNumberOfThreads(1);
-            for ( int iz = 0; iz < Nz; iz++)
-            {
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                //        ConcurrencyUtils.setNumberOfThreads(1);
+                for ( int iz = 0; iz < Nz; iz++)
+                {
 
-                final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
-                final int iz1 = iz;
-                Callable<ApplyJPhaOut> callable = new Callable<ApplyJPhaOut>() {
-                    @Override
-                    public ApplyJPhaOut call() throws Exception {
+                    final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+                    Callable<ApplyJPhaOut> callable = new Callable<ApplyJPhaOut>() {
+                        @Override
+                        public ApplyJPhaOut call() throws Exception {
 
 
-                        double defoc_scale=0;
-                        double Aq[] = new double[2*Npix];
-                        ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+                            double defoc_scale=0;
+                            float Aq[] = new float[2*Npix];
+                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
 
-                        if (iz1 > Nz/2)
-                        {
-                            defoc_scale = DEUXPI*(iz1 - Nz)*dz;
-                        }
-                        else
-                        {
-                            defoc_scale = DEUXPI*iz1*dz;
-                        }
-                        for (int iy = 0; iy < Ny; iy++){
-                            for (int ix = 0; ix < Nx; ix++){
-                                int in = (ix+Nx*iy);
-                                double qin =  qz.get(ix, iy);
-                                Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                            if (iz1 > Nz/2)
+                            {
+                                defoc_scale = DEUXPI*(iz1 - Nz)*dz;
+                            }
+                            else
+                            {
+                                defoc_scale = DEUXPI*iz1*dz;
+                            }
+                            for (int iy = 0; iy < Ny; iy++){
+                                for (int ix = 0; ix < Nx; ix++){
+                                    int in = (ix+Nx*iy);
+                                    float qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                }
+
                             }
 
-                        }
-
-                        /* Fourier transform of the pupil function A(z) */
-                        ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                            /* Fourier transform of the pupil function A(z) */
+                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
 
 
-                        for (int j = 0; j < Ny; j++)
-                        {
-                            for (int i = 0; i < Nx; i++)
+                            for (int j = 0; j < Ny; j++)
                             {
-                                int in = i + j*Nx;
-                                if(maskPupil[in] == 1)
+                                for (int i = 0; i < Nx; i++)
                                 {
-                                    double ph = phi[in] + defoc_scale*psi[in];
-                                    double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                                    for (int k = 0; k < phaseSpace.getNumber(); k++)
+                                    int in = i + j*Nx;
+                                    if(maskPupil[in] )
                                     {
-                                        int Ci;
+                                        double ph = phi[in] + defoc_scale*psi[in];
+                                        double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
+                                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                                        {
+                                            int Ci;
 
-                                        if(radial){
-                                            Ci= (k+1)*Npix + in;
-                                        }else{
-                                            Ci= (k+3)*Npix + in;
+                                            if(radial){
+                                                Ci= (k+1)*Npix + in;
+                                            }else{
+                                                Ci= (k+3)*Npix + in;
+                                            }
+                                            pout.grd[k] -= 2*PSFNorm*jin*Z[Ci];
                                         }
-                                        pout.grd[k] -= 2*PSFNorm*jin*Z[Ci];
                                     }
                                 }
                             }
+
+
+                            return  pout;
+                        }
+                    };
+                    futures.add(service.submit(callable));
+                }
+
+                service.shutdown();
+
+                for (Future<ApplyJPhaOut> future : futures) {
+                    ApplyJPhaOut pout;
+                    try {
+                        pout = future.get();
+                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                        {
+                            JPhi.set(k,JPhi.get(k)+ pout.grd[k]);
+                        }
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+                double J[] = new double[Ny*Nx];
+                float[] Aq = new float[2*Npix];
+                for (int iz = 0; iz < Nz; iz++)
+                {
+
+                    double defoc_scale=0.;
+                    if (iz > Nz/2)
+                    {
+                        defoc_scale = DEUXPI*(iz - Nz)*dz;
+                    }
+                    else
+                    {
+                        defoc_scale = DEUXPI*iz*dz;
+                    }
+
+                    for (int iy = 0; iy < Ny; iy++){
+                        for (int ix = 0; ix < Nx; ix++){
+                            int in = (ix+Nx*iy);
+                            float qin =  ((Float3D) q.asShapedArray()).get(ix, iy, iz);
+                            Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz )*qin;
+                            Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz )*qin;
                         }
 
-
-                        return  pout;
                     }
-                };
-                futures.add(service.submit(callable));
-            }
 
-            service.shutdown();
+                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
 
-            //    List<Output> outputs = new ArrayList<Output>();
-            for (Future<ApplyJPhaOut> future : futures) {
-                ApplyJPhaOut pout;
-                try {
-                    pout = future.get();
-                    for (int k = 0; k < phaseSpace.getNumber(); k++)
+                    for (int in = 0; in < Npix; in++)
                     {
-                        JPhi.set(k,JPhi.get(k)+ pout.grd[k]);
+                        Ci = iz*Npix + in;
+                        double ph = phi[in] + defoc_scale*psi[in];
+                        J[in] = J[in] + rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
                     }
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                }
+
+                for (int k = 0; k < phaseSpace.getNumber(); k++)
+                {
+                    double tmp = 0;
+                    for (int in = 0; in < Npix; in++)
+                    {
+                        Ci = k*Npix + in;
+                        if(radial){
+                            tmp += J[in]*Z[Ci + 1*Npix];
+                        }else{
+                            tmp += J[in]*Z[Ci + 3*Npix];
+                        }
+                    }
+                    JPhi.set(k, -2*PSFNorm*tmp);
                 }
             }
         }else{
-            double J[] = new double[Ny*Nx];
-            double[] Aq = new double[2*Npix];
-            DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
-            for (int iz = 0; iz < Nz; iz++)
-            {
+            if(para){
+                int threads = Runtime.getRuntime().availableProcessors();
+                ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                double defoc_scale=0.;
-                if (iz > Nz/2)
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                //        ConcurrencyUtils.setNumberOfThreads(1);
+                for ( int iz = 0; iz < Nz; iz++)
                 {
-                    defoc_scale = DEUXPI*(iz - Nz)*dz;
-                }
-                else
-                {
-                    defoc_scale = DEUXPI*iz*dz;
-                }
-                //            for (int in = 0; in < Npix; in++)
-                //            {
-                //                // Ci = iz*Npix + in;
-                //                // Aq[2*in] = cpxPsf[2*Ci]*q[Ci];
-                //                //Aq[2*in + 1] = cpxPsf[2*Ci + 1]*q[Ci];
-                //                Double3D cpxPsfZ = (Double3D) cpxPsf.slice(iz);
-                //                Double1D qZ = ((Double3D) q.asShapedArray()).slice(iz).as1D();
-                //                Aq[2*in] =   cpxPsfZ.slice(0, 0).as1D().get(in)*qZ.get(in);
-                //                Aq[2*in + 1] = cpxPsfZ.slice(1, 0).as1D().get(in)*qZ.get(in);
-                //
-                //            }
 
-                for (int iy = 0; iy < Ny; iy++){
-                    for (int ix = 0; ix < Nx; ix++){
-                        int in = (ix+Nx*iy);
-                        double qin =  ((Double3D) q.asShapedArray()).get(ix, iy, iz);
-                        Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz )*qin;
-                        Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+                    Callable<ApplyJPhaOut> callable = new Callable<ApplyJPhaOut>() {
+                        @Override
+                        public ApplyJPhaOut call() throws Exception {
+
+
+                            double defoc_scale=0;
+                            double Aq[] = new double[2*Npix];
+                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+
+                            if (iz1 > Nz/2)
+                            {
+                                defoc_scale = DEUXPI*(iz1 - Nz)*dz;
+                            }
+                            else
+                            {
+                                defoc_scale = DEUXPI*iz1*dz;
+                            }
+                            for (int iy = 0; iy < Ny; iy++){
+                                for (int ix = 0; ix < Nx; ix++){
+                                    int in = (ix+Nx*iy);
+                                    double qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                }
+
+                            }
+
+                            /* Fourier transform of the pupil function A(z) */
+                            ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+
+
+                            for (int j = 0; j < Ny; j++)
+                            {
+                                for (int i = 0; i < Nx; i++)
+                                {
+                                    int in = i + j*Nx;
+                                    if(maskPupil[in] )
+                                    {
+                                        double ph = phi[in] + defoc_scale*psi[in];
+                                        double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
+                                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                                        {
+                                            int Ci;
+
+                                            if(radial){
+                                                Ci= (k+1)*Npix + in;
+                                            }else{
+                                                Ci= (k+3)*Npix + in;
+                                            }
+                                            pout.grd[k] -= 2*PSFNorm*jin*Z[Ci];
+                                        }
+                                    }
+                                }
+                            }
+
+
+                            return  pout;
+                        }
+                    };
+                    futures.add(service.submit(callable));
+                }
+
+                service.shutdown();
+
+                for (Future<ApplyJPhaOut> future : futures) {
+                    ApplyJPhaOut pout;
+                    try {
+                        pout = future.get();
+                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                        {
+                            JPhi.set(k,JPhi.get(k)+ pout.grd[k]);
+                        }
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+                double J[] = new double[Ny*Nx];
+                double[] Aq = new double[2*Npix];
+                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+                for (int iz = 0; iz < Nz; iz++)
+                {
+
+                    double defoc_scale=0.;
+                    if (iz > Nz/2)
+                    {
+                        defoc_scale = DEUXPI*(iz - Nz)*dz;
+                    }
+                    else
+                    {
+                        defoc_scale = DEUXPI*iz*dz;
                     }
 
-                }
+                    for (int iy = 0; iy < Ny; iy++){
+                        for (int ix = 0; ix < Nx; ix++){
+                            int in = (ix+Nx*iy);
+                            double qin =  ((Double3D) q.asShapedArray()).get(ix, iy, iz);
+                            Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz )*qin;
+                            Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                        }
 
-                FFT2D.complexForward(Aq);
+                    }
 
-                for (int in = 0; in < Npix; in++)
-                {
-                    Ci = iz*Npix + in;
-                    double ph = phi[in] + defoc_scale*psi[in];
-                    J[in] = J[in] + rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                }
-            }
+                    FFT2D.complexForward(Aq);
 
-            for (int k = 0; k < phaseSpace.getNumber(); k++)
-            {
-                double tmp = 0;
-                for (int in = 0; in < Npix; in++)
-                {
-                    Ci = k*Npix + in;
-                    if(radial){
-                        tmp += J[in]*Z[Ci + 1*Npix];
-                    }else{
-                        tmp += J[in]*Z[Ci + 3*Npix];
+                    for (int in = 0; in < Npix; in++)
+                    {
+                        Ci = iz*Npix + in;
+                        double ph = phi[in] + defoc_scale*psi[in];
+                        J[in] = J[in] + rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
                     }
                 }
-                JPhi.set(k, -2*PSFNorm*tmp);
+
+                for (int k = 0; k < phaseSpace.getNumber(); k++)
+                {
+                    double tmp = 0;
+                    for (int in = 0; in < Npix; in++)
+                    {
+                        Ci = k*Npix + in;
+                        if(radial){
+                            tmp += J[in]*Z[Ci + 1*Npix];
+                        }else{
+                            tmp += J[in]*Z[Ci + 3*Npix];
+                        }
+                    }
+                    JPhi.set(k, -2*PSFNorm*tmp);
+                }
             }
         }
         return phaseSpace.create(JPhi );
@@ -730,150 +982,286 @@ public class WideFieldModel extends MicroscopeModel{
                 ry[ny]  = ny*scale_y - deltaY;
             }
         }
-        if(para){
-            //  final Double3D q1 = ((Double3D) q.asShapedArray());
-            int threads = Runtime.getRuntime().availableProcessors();
-            ExecutorService service = Executors.newFixedThreadPool(threads);
+        if(single){
+            if(para){
+                int threads = Runtime.getRuntime().availableProcessors();
+                ExecutorService service = Executors.newFixedThreadPool(threads);
 
-            List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
-            //  ConcurrencyUtils.setNumberOfThreads(1);
-            for ( int iz = 0; iz < Nz; iz++)
-            {
+                List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
+                //  ConcurrencyUtils.setNumberOfThreads(1);
+                for ( int iz = 0; iz < Nz; iz++)
+                {
 
-                final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
-                final int iz1 = iz;
-                Callable<ApplyJDefOut> callable = new Callable<ApplyJDefOut>() {
-                    @Override
-                    public ApplyJDefOut call() throws Exception {
+                    final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+                    Callable<ApplyJDefOut> callable = new Callable<ApplyJDefOut>() {
+                        @Override
+                        public ApplyJDefOut call() throws Exception {
 
 
-                        double defoc_scale=0;
-                        double Aq[] = new double[2*Npix];
-                        double defoc;
-                        ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
-                        if (iz1 > Nz/2)
-                        {
-                            defoc = (iz1 - Nz)*dz;
-                            defoc_scale = DEUXPI*(iz1 - Nz)*dz;
-                        }
-                        else
-                        {
-                            defoc = iz1*dz;
-                            defoc_scale = DEUXPI*iz1*dz;
-                        }
-
-                        for (int iy = 0; iy < Ny; iy++){
-                            for (int ix = 0; ix < Nx; ix++){
-                                int in = (ix+Nx*iy);
-                                //double qin =  q1.get(ix, iy, iz1);
-                                double qin =  qz.get(ix, iy);
-                                Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                            double defoc_scale=0;
+                            float Aq[] = new float[2*Npix];
+                            double defoc;
+                            ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
+                            if (iz1 > Nz/2)
+                            {
+                                defoc = (iz1 - Nz)*dz;
+                                defoc_scale = DEUXPI*(iz1 - Nz)*dz;
+                            }
+                            else
+                            {
+                                defoc = iz1*dz;
+                                defoc_scale = DEUXPI*iz1*dz;
                             }
 
-                        }
-                        /* Fourier transform of the pupil function A(z) */
-                        ((DoubleFFT_2D) FFT2D).complexForward(Aq);
-                        for (int j = 0; j < Ny; j++)
-                        {
-                            for (int i = 0; i < Nx; i++)
+                            for (int iy = 0; iy < Ny; iy++){
+                                for (int ix = 0; ix < Nx; ix++){
+                                    int in = (ix+Nx*iy);
+                                    float qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                }
+
+                            }
+                            /* Fourier transform of the pupil function A(z) */
+                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                            for (int j = 0; j < Ny; j++)
                             {
-                                int in = i + j*Nx;
-                                if(maskPupil[in] == 1)
+                                for (int i = 0; i < Nx; i++)
                                 {
-                                    double idef= 1./psi[in];
-                                    double ph = phi[in] + defoc_scale*psi[in];
-                                    double tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                    int in = i + j*Nx;
+                                    if(maskPupil[in] )
                                     {
-                                        dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
-                                        dout.d2 -= tmpvar*( ry[j]*(defoc*idef) );
-                                        dout.d0 += tmpvar*( idef*lambda_ni*defoc );
+                                        double idef= 1./psi[in];
+                                        double ph = phi[in] + defoc_scale*psi[in];
+                                        double tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                        {
+                                            dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                            dout.d2 -= tmpvar*( ry[j]*(defoc*idef) );
+                                            dout.d0 += tmpvar*( idef*lambda_ni*defoc );
+                                        }
                                     }
                                 }
                             }
+
+                            return  dout;
+                        }
+                    };
+                    futures.add(service.submit(callable));
+                }
+
+                service.shutdown();
+
+                for (Future<ApplyJDefOut> future : futures) {
+                    ApplyJDefOut output;
+                    try {
+                        output = future.get();
+                        d0 += output.d0;
+                        d1 -= output.d1;
+                        d2 -= output.d2;
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+
+
+                float Aq[] = new float[2*Npix];
+
+                for (int iz = 0; iz < Nz; iz++)
+                {
+                    double defoc_scale =0.;
+                    if (iz > Nz/2)
+                    {
+                        defoc = (iz - Nz)*dz;
+                        defoc_scale  = DEUXPI*defoc;
+                    }
+                    else
+                    {
+                        defoc = iz*dz;
+                        defoc_scale = DEUXPI*defoc;
+                    }
+
+
+                    for (int iy = 0; iy < Ny; iy++){
+                        for (int ix = 0; ix < Nx; ix++){
+                            int in = (ix+Nx*iy);
+                            float qin =  ((Float3D) q.asShapedArray()).get(ix, iy, iz);
+                            Aq[2*in]=  ((Float4D) cpxPsf).get(0, ix, iy, iz )*qin;
+                            Aq[2*in+1]=  ((Float4D) cpxPsf).get(1, ix, iy, iz )*qin;
                         }
 
-                        return  dout;
                     }
-                };
-                futures.add(service.submit(callable));
-            }
 
-            service.shutdown();
 
-            //    List<Output> outputs = new ArrayList<Output>();
-            for (Future<ApplyJDefOut> future : futures) {
-                ApplyJDefOut output;
-                try {
-                    output = future.get();
-                    //  System.out.println("d0: "+d0 + " d1: " + d1 + " d2: "+d2);
-                    d0 += output.d0;
-                    d1 -= output.d1;
-                    d2 -= output.d2;
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
+
+
+                    for (int j = 0; j < Ny; j++)
+                    {
+                        for (int i = 0; i < Nx; i++)
+                        {
+                            int in = i + j*Nx;
+                            if(maskPupil[in] )
+                            {
+                                idef= 1./psi[in];
+                                double ph = phi[in] + defoc_scale*psi[in];
+                                tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                {
+                                    d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                    d2 -= tmpvar*( ry[j]*(defoc*idef) );
+                                    d0 += tmpvar*( idef*lambda_ni*defoc );
+                                }
+                            }
+                        }
+                    }
                 }
+
             }
         }else{
+            if(para){
+                int threads = Runtime.getRuntime().availableProcessors();
+                ExecutorService service = Executors.newFixedThreadPool(threads);
 
-
-            double Aq[] = new double[2*Npix];
-            DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
-
-            for (int iz = 0; iz < Nz; iz++)
-            {
-                double defoc_scale =0.;
-                if (iz > Nz/2)
+                List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
+                //  ConcurrencyUtils.setNumberOfThreads(1);
+                for ( int iz = 0; iz < Nz; iz++)
                 {
-                    defoc = (iz - Nz)*dz;
-                    defoc_scale  = DEUXPI*defoc;
+
+                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+                    Callable<ApplyJDefOut> callable = new Callable<ApplyJDefOut>() {
+                        @Override
+                        public ApplyJDefOut call() throws Exception {
+
+
+                            double defoc_scale=0;
+                            double Aq[] = new double[2*Npix];
+                            double defoc;
+                            ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
+                            if (iz1 > Nz/2)
+                            {
+                                defoc = (iz1 - Nz)*dz;
+                                defoc_scale = DEUXPI*(iz1 - Nz)*dz;
+                            }
+                            else
+                            {
+                                defoc = iz1*dz;
+                                defoc_scale = DEUXPI*iz1*dz;
+                            }
+
+                            for (int iy = 0; iy < Ny; iy++){
+                                for (int ix = 0; ix < Nx; ix++){
+                                    int in = (ix+Nx*iy);
+                                    double qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                }
+
+                            }
+                            /* Fourier transform of the pupil function A(z) */
+                            ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                            for (int j = 0; j < Ny; j++)
+                            {
+                                for (int i = 0; i < Nx; i++)
+                                {
+                                    int in = i + j*Nx;
+                                    if(maskPupil[in] )
+                                    {
+                                        double idef= 1./psi[in];
+                                        double ph = phi[in] + defoc_scale*psi[in];
+                                        double tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                        {
+                                            dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                            dout.d2 -= tmpvar*( ry[j]*(defoc*idef) );
+                                            dout.d0 += tmpvar*( idef*lambda_ni*defoc );
+                                        }
+                                    }
+                                }
+                            }
+
+                            return  dout;
+                        }
+                    };
+                    futures.add(service.submit(callable));
                 }
-                else
+
+                service.shutdown();
+
+                for (Future<ApplyJDefOut> future : futures) {
+                    ApplyJDefOut output;
+                    try {
+                        output = future.get();
+                        d0 += output.d0;
+                        d1 -= output.d1;
+                        d2 -= output.d2;
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+
+
+                double Aq[] = new double[2*Npix];
+                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+
+                for (int iz = 0; iz < Nz; iz++)
                 {
-                    defoc = iz*dz;
-                    defoc_scale = DEUXPI*defoc;
-                }
-
-
-                for (int iy = 0; iy < Ny; iy++){
-                    for (int ix = 0; ix < Nx; ix++){
-                        int in = (ix+Nx*iy);
-                        double qin =  ((Double3D) q.asShapedArray()).get(ix, iy, iz);
-                        Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz )*qin;
-                        Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                    double defoc_scale =0.;
+                    if (iz > Nz/2)
+                    {
+                        defoc = (iz - Nz)*dz;
+                        defoc_scale  = DEUXPI*defoc;
+                    }
+                    else
+                    {
+                        defoc = iz*dz;
+                        defoc_scale = DEUXPI*defoc;
                     }
 
-                }
+
+                    for (int iy = 0; iy < Ny; iy++){
+                        for (int ix = 0; ix < Nx; ix++){
+                            int in = (ix+Nx*iy);
+                            double qin =  ((Double3D) q.asShapedArray()).get(ix, iy, iz);
+                            Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz )*qin;
+                            Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                        }
+
+                    }
 
 
-                FFT2D.complexForward(Aq);
+                    FFT2D.complexForward(Aq);
 
 
-                for (int j = 0; j < Ny; j++)
-                {
-                    for (int i = 0; i < Nx; i++)
+                    for (int j = 0; j < Ny; j++)
                     {
-                        int in = i + j*Nx;
-                        if(maskPupil[in] == 1)
+                        for (int i = 0; i < Nx; i++)
                         {
-                            // Ci = iz*Npix + in;
-                            idef= 1./psi[in];
-                            double ph = phi[in] + defoc_scale*psi[in];
-                            tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                            int in = i + j*Nx;
+                            if(maskPupil[in] )
                             {
-                                d1 -= tmpvar*( rx[i]*(defoc*idef ));
-                                d2 -= tmpvar*( ry[j]*(defoc*idef) );
-                                d0 += tmpvar*( idef*lambda_ni*defoc );
+                                idef= 1./psi[in];
+                                double ph = phi[in] + defoc_scale*psi[in];
+                                tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                {
+                                    d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                    d2 -= tmpvar*( ry[j]*(defoc*idef) );
+                                    d0 += tmpvar*( idef*lambda_ni*defoc );
+                                }
                             }
                         }
                     }
                 }
             }
-
         }
         switch(defocusSpace.getNumber())
         {
@@ -889,11 +1277,6 @@ public class WideFieldModel extends MicroscopeModel{
                 break;
         }
 
-
-        //        long stopTime = System.currentTimeMillis();
-        //        long elapsedTime = stopTime - startTime;
-        //        System.out.println("time: "+elapsedTime);
-
         return  defocusSpace.create(Double1D.wrap(grd, defocusSpace.getShape()));
 
     }
@@ -903,7 +1286,8 @@ public class WideFieldModel extends MicroscopeModel{
      */
     private void computeMaskPupil()
     {
-        maskPupil = new double[Nx*Ny];
+        maskPupil = new boolean[Nx*Ny];
+        mapPupil = new boolean[Nx*Ny];
         double scale_y = Math.pow(1/dxy/Ny, 2);
         double scale_x = Math.pow(1/dxy/Nx, 2);
         double rx, ry, ix, iy;
@@ -919,9 +1303,14 @@ public class WideFieldModel extends MicroscopeModel{
                 rx = ix*ix*scale_x;
                 if( (rx + ry) < radius2 )
                 {
-                    maskPupil[nx + ny*Nx] = 1;
+                    maskPupil[nx + ny*Nx] = true;
+                    mapPupil[nx + ny*Nx] = true;
                     pupil_area += 1;
 
+                }else{
+
+                    maskPupil[nx + ny*Nx] = false;
+                    mapPupil[nx + ny*Nx] = false;
                 }
             }
         }
@@ -993,7 +1382,7 @@ public class WideFieldModel extends MicroscopeModel{
             for (int nx = 0; nx < Nx; nx++)
             {
                 int nxy = nx + ny*Nx;
-                if (maskPupil[nxy] == 1)
+                if (mapPupil[nxy] )
                 {
                     if(nx > Nx/2)
                     {
@@ -1009,11 +1398,12 @@ public class WideFieldModel extends MicroscopeModel{
                     if (q < 0.0)
                     {
                         psi[nxy] = 0;
-                        maskPupil[nxy] = 0;
+                        maskPupil[nxy] = false;
                     }
                     else
                     {
                         psi[nxy] = Math.sqrt(q);
+                        maskPupil[nxy] = true;
                     }
                 }
             }
@@ -1076,7 +1466,7 @@ public class WideFieldModel extends MicroscopeModel{
         double betaNorm = 1./( beta.norm2());
         for(int in = 0; in < Npix; in++)
         {
-            if (maskPupil[in] == 1)
+            if (maskPupil[in]  )
             {
 
                 for (int n = 0; n < beta.getNumber(); ++n)
@@ -1100,7 +1490,7 @@ public class WideFieldModel extends MicroscopeModel{
         phi = new double[Npix];
         for(int in = 0; in < Npix; in++)
         {
-            if (maskPupil[in] == 1)
+            if (maskPupil[in] )
             {
 
                 for (int n = 0; n < phase.getNumber(); ++n)
@@ -1213,7 +1603,7 @@ public class WideFieldModel extends MicroscopeModel{
     /**
      * @return the pupil mask
      */
-    public double[] getMaskPupil() {
+    public boolean[] getMaskPupil() {
         if (PState<1){
             computePSF();
         }
@@ -1289,9 +1679,9 @@ public class WideFieldModel extends MicroscopeModel{
         MathUtils.stat(psi);
         System.out.println();
 
-        System.out.println("----PUPIL----");
-        MathUtils.stat(maskPupil);
-        System.out.println();
+        /*System.out.println("----PUPIL----");
+        MathUtils.stat( maskPupil);
+        System.out.println();*/
 
         System.out.println("----a----");
         MathUtils.statC(cpxPsf.toDouble().getData());
