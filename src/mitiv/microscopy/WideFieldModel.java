@@ -377,7 +377,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             float Aq[] = new float[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+                            ApplyJPhaOut pout = new ApplyJPhaOut( modulusSpace.getNumber());
 
                             if (iz1 > Nz/2)
                             {
@@ -514,7 +514,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             double Aq[] = new double[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+                            ApplyJPhaOut pout = new ApplyJPhaOut( modulusSpace.getNumber());
 
                             if (iz1 > Nz/2)
                             {
@@ -1458,7 +1458,7 @@ public class WideFieldModel extends MicroscopeModel{
         if(beta.belongsTo(modulusSpace)){
             modulus_coefs = beta;
         }else{
-            // TODO Error
+            throw new IllegalArgumentException("DoubleShapedVector beta does not belong to the modulus space");
         }
 
         int Npix = Nx*Ny;
@@ -1718,7 +1718,7 @@ public class WideFieldModel extends MicroscopeModel{
         }else{
             Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
         }
-
+        computeZernike();
         modulus_coefs = modulusSpace.create(0.);
         modulus_coefs.set(0, 1.);
         setModulus(modulus_coefs);

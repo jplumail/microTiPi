@@ -129,7 +129,6 @@ public class PSF_Estimation  {
         }
 
         if(single){
-            System.out.println("single");
             dataSpace = new FloatShapedVectorSpace(dataShape);
             objSpace = new FloatShapedVectorSpace(dataShape);
         }else{
