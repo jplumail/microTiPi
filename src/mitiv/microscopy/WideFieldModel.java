@@ -24,6 +24,7 @@ import mitiv.array.Float4D;
 import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
+import mitiv.linalg.shaped.ShapedVector;
 import mitiv.old.MathUtils;
 
 public class WideFieldModel extends MicroscopeModel{
@@ -344,7 +345,7 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the gradient of this criterion in the modulus coefficients space.
      */
     @Override
-    public  DoubleShapedVector apply_J_modulus(DoubleShapedVector q)
+    public  DoubleShapedVector apply_J_modulus( ShapedVector q)
     {
         int Ci;
         final int Npix = Nx*Ny;
@@ -641,7 +642,7 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the gradient of this criterion in the phase coefficients space.
      */
     @Override
-    public DoubleShapedVector apply_J_phi(DoubleShapedVector q)
+    public DoubleShapedVector apply_J_phi(ShapedVector q)
     {
         int Ci;
         final int Npix = Nx*Ny;
@@ -946,7 +947,7 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the gradient of this criterion in the defocus coefficients space.
      */
     @Override
-    public DoubleShapedVector apply_J_defocus(DoubleShapedVector q)
+    public DoubleShapedVector apply_J_defocus(ShapedVector q)
     {
 
         // long startTime = System.currentTimeMillis();

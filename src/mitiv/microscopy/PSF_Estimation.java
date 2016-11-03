@@ -25,6 +25,7 @@
 
 package mitiv.microscopy;
 
+import mitiv.array.Array3D;
 import mitiv.array.ArrayFactory;
 import mitiv.array.DoubleArray;
 import mitiv.array.ShapedArray;
@@ -32,6 +33,9 @@ import mitiv.base.Shape;
 import mitiv.deconv.WeightedConvolutionCost;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
+import mitiv.linalg.shaped.FloatShapedVectorSpace;
+import mitiv.linalg.shaped.ShapedVector;
+import mitiv.linalg.shaped.ShapedVectorSpace;
 import mitiv.old.MathUtils;
 import mitiv.optim.BoundProjector;
 import mitiv.optim.LineSearch;
@@ -50,16 +54,17 @@ public class PSF_Estimation  {
     private boolean debug = false;
     private int maxiter = 20;
     private int maxeval = 20;
-    private DoubleArray data = null;
+    private ShapedArray data = null;
     private ShapedArray obj = null;
     private DoubleArray result = null;
     private ShapedArray psf = null;
     private double fcost = 0.0;
-    private DoubleShapedVector gcost = null;
+    private ShapedVector gcost = null;
     private MicroscopeModel pupil = null;
     private ReverseCommunicationOptimizer minimizer = null;
     //   private ReconstructionViewer viewer = null;
-    private DoubleArray weights = null;
+    private  ShapedArray weights = null;
+    private boolean single;
 
     public static final int DEFOCUS = 1;
     public static final int ALPHA = 2;
@@ -74,6 +79,7 @@ public class PSF_Estimation  {
     public PSF_Estimation(MicroscopeModel pupil) {
         if (pupil!=null){
             this.pupil = pupil;
+            single = pupil.single;
         }else{
             fatal("pupil not specified");
         }
@@ -112,7 +118,8 @@ public class PSF_Estimation  {
         Shape dataShape = data.getShape();
         Shape xShape = x.getShape();
         int rank = data.getRank();
-        DoubleShapedVectorSpace dataSpace = new DoubleShapedVectorSpace(dataShape);
+        ShapedVectorSpace dataSpace, objSpace;
+
         DoubleShapedVector best_x = x.clone();
         // Check the PSF.
         if (obj == null) {
@@ -122,8 +129,14 @@ public class PSF_Estimation  {
             fatal("Obj must have same rank as data.");
         }
 
-
-        DoubleShapedVectorSpace objSpace = new DoubleShapedVectorSpace(dataShape);
+        if(single){
+            System.out.println("single");
+            dataSpace = new FloatShapedVectorSpace(dataShape);
+            objSpace = new FloatShapedVectorSpace(dataShape);
+        }else{
+            dataSpace = new DoubleShapedVectorSpace(dataShape);
+            objSpace = new DoubleShapedVectorSpace(dataShape);
+        }
 
         if (result != null) {
             /* We try to keep the previous result, at least its dimensions
@@ -247,7 +260,7 @@ public class PSF_Estimation  {
                     gX =  pupil.apply_J_defocus(gcost);
                     if (debug) {
                         System.out.println("grdx");
-                        MathUtils.stat(gcost.getData());
+                        //   MathUtils.stat(gcost.getData());
                         System.out.println("grd");
                         MathUtils.printArray(gX.getData());
                     }
@@ -265,7 +278,7 @@ public class PSF_Estimation  {
                     gX =  pupil.apply_J_modulus(gcost);
                     if (debug) {
                         System.out.println("grdx");
-                        MathUtils.stat(gcost.getData());
+                        //     MathUtils.stat(gcost.getData());
                         System.out.println("grd");
                         MathUtils.printArray(gX.getData());
                     }
@@ -370,8 +383,8 @@ public class PSF_Estimation  {
     public void start(){
         run = true;
     }
-    public void setWeight(DoubleArray W){
-        this.weights = W;
+    public void setWeight(ShapedArray shapedArray){
+        this.weights = shapedArray;
     }
     /* public ReconstructionViewer getViewer() {
         return viewer;
@@ -385,18 +398,18 @@ public class PSF_Estimation  {
     public MicroscopeModel getPupil() {
         return pupil;
     }
-    public DoubleArray getData() {
+    public ShapedArray getData() {
         return data;
     }
 
-    public void setData(DoubleArray data) {
-        this.data = data;
+    public void setData(ShapedArray shapedArray) {
+        this.data = shapedArray;
     }
 
     public ShapedArray getPsf() {
         return psf;
     }
-    public void setPsf(DoubleArray psf) {
+    public void setPsf(Array3D psf) {
         this.psf = psf;
     }
 
@@ -441,9 +454,9 @@ public class PSF_Estimation  {
     public double getGradientNormInf() {
         return (gcost == null ? 0.0 : gcost.normInf());
     }
-    public void setObj(ShapedArray obj) {
+    public void setObj(ShapedArray objArray) {
         // TODO Auto-generated method stub
-        this.obj = obj;
+        this.obj = objArray;
 
     }
 }

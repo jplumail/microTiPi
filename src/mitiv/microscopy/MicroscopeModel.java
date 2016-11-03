@@ -30,6 +30,7 @@ import mitiv.array.Array3D;
 import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
+import mitiv.linalg.shaped.ShapedVector;
 
 /**
  * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)
@@ -79,9 +80,9 @@ public abstract class MicroscopeModel
 
     public  abstract  void computePSF();
     public  abstract  Array3D getPSF();
-    abstract protected DoubleShapedVector apply_J_modulus(DoubleShapedVector grad);
-    abstract protected DoubleShapedVector apply_J_defocus(DoubleShapedVector grad);
-    abstract protected DoubleShapedVector apply_J_phi(DoubleShapedVector grad);
+    abstract protected DoubleShapedVector apply_J_modulus(ShapedVector grad);
+    abstract protected DoubleShapedVector apply_J_defocus(ShapedVector grad);
+    abstract protected DoubleShapedVector apply_J_phi(ShapedVector grad);
 
     abstract protected  void setDefocus(DoubleShapedVector defoc);
     abstract protected  void setModulus(DoubleShapedVector modulus);
@@ -120,9 +121,10 @@ public abstract class MicroscopeModel
         Ny = psfShape.dimension(1);
         Nz = psfShape.dimension(2);
         this.psfShape = psfShape;
+        this.single = single;
     }
 
-    public DoubleShapedVector apply_Jacobian(DoubleShapedVector grad){
+    public DoubleShapedVector apply_Jacobian(ShapedVector grad){
         if(grad.getOwner() ==  defocusSpace){
             return apply_J_defocus( grad);
         }else if(grad.getOwner() ==  phaseSpace){
