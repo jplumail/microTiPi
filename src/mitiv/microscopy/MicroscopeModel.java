@@ -31,6 +31,7 @@ import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
+import mitiv.linalg.shaped.ShapedVectorSpace;
 
 /**
  * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)
@@ -124,12 +125,12 @@ public abstract class MicroscopeModel
         this.single = single;
     }
 
-    public DoubleShapedVector apply_Jacobian(ShapedVector grad){
-        if(grad.getOwner() ==  defocusSpace){
+    public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace){
+        if(xspace ==  defocusSpace){
             return apply_J_defocus( grad);
-        }else if(grad.getOwner() ==  phaseSpace){
+        }else if(xspace ==  phaseSpace){
             return apply_J_phi( grad);
-        }else if(grad.getOwner() ==  modulusSpace){
+        }else if(xspace ==  modulusSpace){
             return apply_J_modulus( grad);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");

@@ -1,4 +1,6 @@
-package mitiv.microscopy;
+package biphoton;
+
+import mitiv.microscopy.MicroscopeModel;
 
 public class BiPhotonModel extends MicroscopeModel {
     Widefi

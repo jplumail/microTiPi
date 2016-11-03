@@ -227,7 +227,7 @@ public class PSF_Estimation  {
                         System.out.println("Cost: " + best_cost);
                     }
                 }
-                gX =  pupil.apply_Jacobian(gcost);
+                gX =  pupil.apply_Jacobian(gcost,x.getSpace());
 
             } else if (task == OptimTask.NEW_X || task == OptimTask.FINAL_X) {
                 /*   if (viewer != null) {
