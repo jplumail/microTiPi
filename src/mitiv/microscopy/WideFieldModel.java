@@ -37,7 +37,7 @@ public class WideFieldModel extends MicroscopeModel{
     protected double lambda; // the emission wavelength in meters
 
     protected double lambda_ni;  // (ni / \lambda)
-    protected double radius; // radius of the pupil in meter
+    protected double radius; // radius of the pupil in meter^-1
     protected double pupil_area; // area of the pupil
     protected double[] Z; // Zernike polynomials basis
     protected boolean[] maskPupil; // position in the where the pupil is non null including vigneting
@@ -352,7 +352,6 @@ public class WideFieldModel extends MicroscopeModel{
         double defoc_scale = 0.;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
         //   double Aq[] = new double[2*Npix];
-        double J[] = new double[Ny*Nx];
         final double NBeta =1./modulus_coefs.norm2();
         Double1D JRho =  Double1D.create(modulusSpace.getShape());
 
@@ -447,6 +446,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }else{
                 //  DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+                double J[] = new double[Ny*Nx];
 
                 for (int iz = 0; iz < Nz; iz++)
                 {
@@ -491,7 +491,8 @@ public class WideFieldModel extends MicroscopeModel{
                         Ci = k*Npix + in;
                         tmp += J[in]*Z[Ci];
                     }
-                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.norm2()*NBeta,2))*NBeta);
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+
                 }
             }
 
@@ -500,21 +501,23 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-                //       ConcurrencyUtils.setNumberOfThreads(1);
+                List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
+
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
-                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    //    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
                     final int iz1 = iz;
-                    Callable<ApplyJPhaOut> callable = new Callable<ApplyJPhaOut>() {
+                    Callable<double[]> callable = new Callable<double[]>() {
                         @Override
-                        public ApplyJPhaOut call() throws Exception {
+                        public double[] call() throws Exception {
 
 
                             double defoc_scale=0;
-                            double Aq[] = new double[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( modulusSpace.getNumber());
+                            double[] Aq = new double[2*Npix];
+                            double[] J = new double[Npix];
 
                             if (iz1 > Nz/2)
                             {
@@ -527,9 +530,11 @@ public class WideFieldModel extends MicroscopeModel{
                             for (int iy = 0; iy < Ny; iy++){
                                 for (int ix = 0; ix < Nx; ix++){
                                     int in = (ix+Nx*iy);
-                                    double qin =  qz.get(ix, iy);
-                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                    double qin =  qz[in];
+                                    //   Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                    Aq[2*in]=   Az[2*in]*qin;
+                                    Aq[2*in+1]=  Az[2*in +1]*qin;
                                 }
 
                             }
@@ -537,6 +542,14 @@ public class WideFieldModel extends MicroscopeModel{
                             /* Fourier transform of the pupil function A(z) */
                             ((DoubleFFT_2D) FFT2D).complexForward(Aq);
 
+                            for (int in = 0; in < Npix; in++)
+                            {
+                                double ph = phi[in] + defoc_scale*psi[in];
+                                J[in] = J[in] + Aq[2*in]*Math.cos(ph) - Aq[2*in + 1]*Math.sin(ph);
+                            }
+
+
+                            /*
 
                             for (int j = 0; j < Ny; j++)
                             {
@@ -551,6 +564,7 @@ public class WideFieldModel extends MicroscopeModel{
                                         {
                                             int Ci= k*Npix + in;
                                             pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta;
+
                                         }
                                     }
                                 }
@@ -558,13 +572,15 @@ public class WideFieldModel extends MicroscopeModel{
 
 
                             return  pout;
+                             */
+                            return J;
                         }
                     };
                     futures.add(service.submit(callable));
                 }
 
                 service.shutdown();
-
+                /*
                 for (Future<ApplyJPhaOut> future : futures) {
                     ApplyJPhaOut pout;
                     try {
@@ -580,9 +596,35 @@ public class WideFieldModel extends MicroscopeModel{
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
+                }*/
+                for (Future<double[]> future : futures) {
+                    double[] jt;
+                    try {
+                        jt = future.get();
+                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                        {
+                            double tmp = 0;
+                            for (int in = 0; in < Npix; in++)
+                            {
+                                Ci = k*Npix + in;
+                                tmp += jt[in]*Z[Ci];
+                            }
+                            JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+                        }
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                 }
             }else{
-                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+                //     DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
+                double J[] = new double[Ny*Nx];
+
+                System.out.println("-----J-");
+                MathUtils.stat(J);
 
                 double Aq[] = new double[2*Npix];
                 for (int iz = 0; iz < Nz; iz++)
@@ -608,7 +650,7 @@ public class WideFieldModel extends MicroscopeModel{
                     }
 
 
-                    FFT2D.complexForward(Aq);
+                    ((DoubleFFT_2D) FFT2D).complexForward(Aq);
 
                     for (int in = 0; in < Npix; in++)
                     {
@@ -618,6 +660,8 @@ public class WideFieldModel extends MicroscopeModel{
                     }
 
                 }
+                System.out.println();
+
 
                 for (int k = 0; k < modulusSpace.getNumber(); k++)
                 {
@@ -627,10 +671,16 @@ public class WideFieldModel extends MicroscopeModel{
                         Ci = k*Npix + in;
                         tmp += J[in]*Z[Ci];
                     }
-                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.norm2()*NBeta,2))*NBeta);
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+                    //  JRho.set(k,2*PSFNorm*tmp);
                 }
             }
         }
+
+        System.out.println("----JRho: " + modulusSpace.getNumber());
+        MathUtils.stat(JRho.flatten());
+        System.out.println();
+
         return modulusSpace.create(JRho);
 
     }
@@ -777,6 +827,9 @@ public class WideFieldModel extends MicroscopeModel{
                     }
                 }
 
+                System.out.println("----tmp--");
+                MathUtils.stat(J);
+                System.out.println();
                 for (int k = 0; k < phaseSpace.getNumber(); k++)
                 {
                     double tmp = 0;
@@ -921,6 +974,10 @@ public class WideFieldModel extends MicroscopeModel{
                     }
                 }
 
+
+                System.out.println("----Jin pahse--");
+                MathUtils.stat(J);
+                System.out.println();
                 for (int k = 0; k < phaseSpace.getNumber(); k++)
                 {
                     double tmp = 0;
@@ -954,7 +1011,8 @@ public class WideFieldModel extends MicroscopeModel{
 
         double scale_x = 1/(Nx*dxy);
         double scale_y = 1/(Ny*dxy);
-        double defoc, tmpvar, idef, d0 = 0, d1 = 0, d2 = 0;
+        //  double defoc, tmpvar, idef;
+        double d0 = 0, d1 = 0, d2 = 0;
         final double[] rx = new double[Nx];
         final double[] ry = new double[Ny];
         final int Npix =  Nx*Ny;
@@ -1070,7 +1128,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }else{
 
-
+                double defoc, idef, tmpvar;
                 float Aq[] = new float[2*Npix];
 
                 for (int iz = 0; iz < Nz; iz++)
@@ -1128,22 +1186,25 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
+                List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
                 //  ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
 
-                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    //      final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
                     final int iz1 = iz;
-                    Callable<ApplyJDefOut> callable = new Callable<ApplyJDefOut>() {
+                    Callable<double[]> callable = new Callable<double[]>() {
                         @Override
-                        public ApplyJDefOut call() throws Exception {
+                        public double[] call() throws Exception {
 
 
                             double defoc_scale=0;
                             double Aq[] = new double[2*Npix];
                             double defoc;
-                            ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
+                            //  ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
+                            double[] dout = new double[3];
                             if (iz1 > Nz/2)
                             {
                                 defoc = (iz1 - Nz)*dz;
@@ -1158,9 +1219,11 @@ public class WideFieldModel extends MicroscopeModel{
                             for (int iy = 0; iy < Ny; iy++){
                                 for (int ix = 0; ix < Nx; ix++){
                                     int in = (ix+Nx*iy);
-                                    double qin =  qz.get(ix, iy);
-                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                    //  double qin =  qz.get(ix, iy);
+                                    //  Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                                    Aq[2*in]=   Az[2*in]*qz[in];
+                                    Aq[2*in+1]=  Az[2*in+1]*qz[in];
                                 }
 
                             }
@@ -1177,9 +1240,12 @@ public class WideFieldModel extends MicroscopeModel{
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
                                         {
-                                            dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                            /* dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
                                             dout.d2 -= tmpvar*( ry[j]*(defoc*idef) );
-                                            dout.d0 += tmpvar*( idef*lambda_ni*defoc );
+                                            dout.d0 += tmpvar*( idef*lambda_ni*defoc );*/
+                                            dout[1] -= tmpvar*( rx[i]*(defoc*idef ));
+                                            dout[2] -= tmpvar*( ry[j]*(defoc*idef) );
+                                            dout[0] += tmpvar*( idef*lambda_ni*defoc );
                                         }
                                     }
                                 }
@@ -1193,13 +1259,13 @@ public class WideFieldModel extends MicroscopeModel{
 
                 service.shutdown();
 
-                for (Future<ApplyJDefOut> future : futures) {
-                    ApplyJDefOut output;
+                for (Future<double[]> future : futures) {
+                    double[] output;
                     try {
                         output = future.get();
-                        d0 += output.d0;
-                        d1 -= output.d1;
-                        d2 -= output.d2;
+                        d0 += output[0];
+                        d1 -= output[1];
+                        d2 -= output[2];
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -1210,39 +1276,44 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }else{
 
-
-                double Aq[] = new double[2*Npix];
-                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
-
-                for (int iz = 0; iz < Nz; iz++)
+                for ( int iz = 0; iz < Nz; iz++)
                 {
-                    double defoc_scale =0.;
-                    if (iz > Nz/2)
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
+
+                    //      final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    final int iz1 = iz;
+
+
+                    double defoc_scale=0;
+                    double Aq[] = new double[2*Npix];
+                    double defoc;
+                    //  ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
+                    // double[] dout = new double[3];
+                    if (iz1 > Nz/2)
                     {
-                        defoc = (iz - Nz)*dz;
-                        defoc_scale  = DEUXPI*defoc;
+                        defoc = (iz1 - Nz)*dz;
+                        defoc_scale = DEUXPI*(iz1 - Nz)*dz;
                     }
                     else
                     {
-                        defoc = iz*dz;
-                        defoc_scale = DEUXPI*defoc;
+                        defoc = iz1*dz;
+                        defoc_scale = DEUXPI*iz1*dz;
                     }
-
 
                     for (int iy = 0; iy < Ny; iy++){
                         for (int ix = 0; ix < Nx; ix++){
                             int in = (ix+Nx*iy);
-                            double qin =  ((Double3D) q.asShapedArray()).get(ix, iy, iz);
-                            Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz )*qin;
-                            Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz )*qin;
+                            //  double qin =  qz.get(ix, iy);
+                            //  Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                            //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
+                            Aq[2*in]=   Az[2*in]*qz[in];
+                            Aq[2*in+1]=  Az[2*in+1]*qz[in];
                         }
 
                     }
-
-
-                    FFT2D.complexForward(Aq);
-
-
+                    /* Fourier transform of the pupil function A(z) */
+                    ((DoubleFFT_2D) FFT2D).complexForward(Aq);
                     for (int j = 0; j < Ny; j++)
                     {
                         for (int i = 0; i < Nx; i++)
@@ -1250,10 +1321,13 @@ public class WideFieldModel extends MicroscopeModel{
                             int in = i + j*Nx;
                             if(maskPupil[in] )
                             {
-                                idef= 1./psi[in];
+                                double idef= 1./psi[in];
                                 double ph = phi[in] + defoc_scale*psi[in];
-                                tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
+                                double tmpvar = -DEUXPI*rho[in]*( Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph) )*PSFNorm;
                                 {
+                                    /* dout.d1 -= tmpvar*( rx[i]*(defoc*idef ));
+                                            dout.d2 -= tmpvar*( ry[j]*(defoc*idef) );
+                                            dout.d0 += tmpvar*( idef*lambda_ni*defoc );*/
                                     d1 -= tmpvar*( rx[i]*(defoc*idef ));
                                     d2 -= tmpvar*( ry[j]*(defoc*idef) );
                                     d0 += tmpvar*( idef*lambda_ni*defoc );
@@ -1261,6 +1335,7 @@ public class WideFieldModel extends MicroscopeModel{
                             }
                         }
                     }
+
                 }
             }
         }
@@ -1278,6 +1353,9 @@ public class WideFieldModel extends MicroscopeModel{
                 break;
         }
 
+        System.out.println("--------------");
+        System.out.println("grd");
+        MathUtils.printArray(grd);
         return  defocusSpace.create(Double1D.wrap(grd, defocusSpace.getShape()));
 
     }
@@ -1336,7 +1414,7 @@ public class WideFieldModel extends MicroscopeModel{
         double[] grd;
         public ApplyJPhaOut( int nMode){
             grd = new double[nMode];
-            Arrays.fill(grd, 0);
+            Arrays.fill(grd, 0.);
         }
     }
 
@@ -1460,7 +1538,7 @@ public class WideFieldModel extends MicroscopeModel{
         }else{
             throw new IllegalArgumentException("DoubleShapedVector beta does not belong to the modulus space");
         }
-
+        System.out.println("beta  "+beta.getNumber());
         int Npix = Nx*Ny;
         rho = new double[Npix];
         //    double betaNorm = 1./(Math.sqrt(MathUtils.innerProd(modulus_coefs, modulus_coefs)));
@@ -1470,13 +1548,19 @@ public class WideFieldModel extends MicroscopeModel{
             if (maskPupil[in]  )
             {
 
-                for (int n = 0; n < beta.getNumber(); ++n)
+                for (int n = 0; n < beta.getNumber(); n++)
                 {
                     rho[in] += Z[in + n*Npix]*beta.get(n)*betaNorm;
+                    //System.out.println("beta("+n+") = "+beta.get(n));
                 }
+
+
             }
         }
 
+        System.out.println("----RHO----");
+        MathUtils.stat(rho);
+        System.out.println();
         freePSF();
     }
 
@@ -1711,6 +1795,8 @@ public class WideFieldModel extends MicroscopeModel{
         if(nModulus<1){
             nModulus = 1;
         }
+        System.out.println("nmodulus  "+nModulus);
+
         modulusSpace =  new DoubleShapedVectorSpace(nModulus);
 
         if(radial){
@@ -1721,7 +1807,10 @@ public class WideFieldModel extends MicroscopeModel{
         computeZernike();
         modulus_coefs = modulusSpace.create(0.);
         modulus_coefs.set(0, 1.);
+        System.out.println("modulus_coefs  "+modulus_coefs.getNumber());
+
         setModulus(modulus_coefs);
+
 
     }
 
@@ -1740,5 +1829,12 @@ public class WideFieldModel extends MicroscopeModel{
 
 
 
+    public int getNModulus() {
+        return modulus_coefs.getNumber();
+    }
+
+    public int getNPhase() {
+        return phase_coefs.getNumber();
+    }
 }
 

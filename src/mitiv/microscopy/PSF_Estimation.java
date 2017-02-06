@@ -26,8 +26,6 @@
 package mitiv.microscopy;
 
 import mitiv.array.Array3D;
-import mitiv.array.ArrayFactory;
-import mitiv.array.DoubleArray;
 import mitiv.array.ShapedArray;
 import mitiv.base.Shape;
 import mitiv.deconv.WeightedConvolutionCost;
@@ -36,6 +34,7 @@ import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.FloatShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
+import mitiv.old.MathUtils;
 import mitiv.optim.BoundProjector;
 import mitiv.optim.LineSearch;
 import mitiv.optim.MoreThuenteLineSearch;
@@ -50,12 +49,12 @@ public class PSF_Estimation  {
     private int limitedMemorySize = 5;
     private double lowerBound = Double.NEGATIVE_INFINITY;
     private double upperBound = Double.POSITIVE_INFINITY;
-    private boolean debug = false;
+    private boolean debug = true;
     private int maxiter = 20;
     private int maxeval = 20;
     private ShapedArray data = null;
     private ShapedArray obj = null;
-    private DoubleArray result = null;
+    //  private DoubleArray result = null;
     private ShapedArray psf = null;
     private double fcost = 0.0;
     private ShapedVector gcost = null;
@@ -108,6 +107,8 @@ public class PSF_Estimation  {
         else if(flag == BETA)
         {
             x = pupil.modulus_coefs;
+            System.out.println("pupil.modulus_coefs: " + pupil.modulus_coefs.getNumber());
+
         }else{
             fatal("Wrong flag type");
         }
@@ -115,7 +116,6 @@ public class PSF_Estimation  {
 
 
         Shape dataShape = data.getShape();
-        Shape xShape = x.getShape();
         int rank = data.getRank();
         ShapedVectorSpace dataSpace, objSpace;
 
@@ -136,21 +136,21 @@ public class PSF_Estimation  {
             objSpace = new DoubleShapedVectorSpace(dataShape);
         }
 
-        if (result != null) {
-            /* We try to keep the previous result, at least its dimensions
-             * must match. */
-            for (int k = 0; k < rank; ++k) {
-                if (result.getDimension(k) != data.getDimension(k)) {
-                    result = null;
-                    break;
-                }
-            }
-        }
+        //        if (result != null) {
+        //            /* We try to keep the previous result, at least its dimensions
+        //             * must match. */
+        //            for (int k = 0; k < rank; ++k) {
+        //                if (result.getDimension(k) != data.getDimension(k)) {
+        //                    result = null;
+        //                    break;
+        //                }
+        //            }
+        //        }
 
         // Initialize a vector space and populate it with workspace vectors.
 
         DoubleShapedVectorSpace variableSpace = x.getSpace();
-        result = ArrayFactory.wrap(x.getData(), xShape);
+        //  result = ArrayFactory.wrap(x.getData(), xShape);
         int[] off ={0,0, 0};
         // Build convolution operator.
         WeightedConvolutionCost fdata = WeightedConvolutionCost.build(objSpace, dataSpace);
@@ -176,6 +176,7 @@ public class PSF_Estimation  {
         // Initialize the non linear conjugate gradient
         LineSearch lineSearch = null;
         VMLMB vmlmb = null;
+        //BLMVM vmlmb = null;
         BoundProjector projector = null;
         int bounded = 0;
         limitedMemorySize = 0;
@@ -262,8 +263,8 @@ public class PSF_Estimation  {
             task = minimizer.iterate(x, fcost, gX);
 
         }
-        pupil.setParam(best_x);
-        /*
+        //  pupil.setParam(best_x);
+
         if(flag == DEFOCUS)
         {
             if (debug) {
@@ -284,13 +285,13 @@ public class PSF_Estimation  {
         }
         else if(flag == BETA)
         {
-            if (debug) {
+            if (true) {
                 System.out.println("--------------");
                 System.out.println("beta");
                 MathUtils.printArray(best_x.getData());
             }
             pupil.setModulus(best_x );
-        }*/
+        }
     }
 
     /* Below are all methods required for a ReconstructionJob. */
@@ -358,17 +359,17 @@ public class PSF_Estimation  {
         this.psf = psf;
     }
 
-    // @Override
-    public DoubleArray getResult() {
-        /* Nothing else to do because the actual result is in a vector
-         * which shares the contents of the ShapedArray.  Otherwise,
-         * some kind of synchronization is needed. */
-        return result;
-    }
-
-    public void setResult(DoubleArray result) {
-        this.result = result;
-    }
+    //    // @Override
+    //    public DoubleArray getResult() {
+    //        /* Nothing else to do because the actual result is in a vector
+    //         * which shares the contents of the ShapedArray.  Otherwise,
+    //         * some kind of synchronization is needed. */
+    //        return result;
+    //    }
+    //
+    //    public void setResult(DoubleArray result) {
+    //        this.result = result;
+    //    }
 
     // @Override
     public int getIterations() {

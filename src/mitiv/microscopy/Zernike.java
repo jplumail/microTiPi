@@ -216,74 +216,74 @@ public class Zernike
                 double N;
                 double zr = 0;
                 /* J != 1 & m = 0 */
-                        if(m == 0)
+                if(m == 0)
+                {
+                    for (int l = 0; l < WH; l++)
+                    {
+                        zr = 0;
+                        N = Math.sqrt(n + 1);
+                        for( int s = (n - m)/2; s >= 0; s-- )
                         {
+                            zr = zr +  R_mn[s]*rPowers[l + (n - 2*s)*WH];
+                        }
+                        Z[l + nz*WH] = N*zr;
+                    }
+                    if( normalize)
+                    {
+                        double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
+                        for (int l = 0; l < WH; l++) // PUPIL
+                        {
+                            Z[l + nz*WH] *= NormZ;
+                        }
+                    }
+                }
+                else
+                {
+                    /* J > 0 & J even & m != 0 --> azimuthal part is a cosine */
+                    if(MathUtils.even(nz + 1))
+                    {
+                        for (int l = 0; l < WH; l++)
+                        {
+                            N = Math.sqrt( 2*(n + 1) );
+                            zr = 0;
+                            for( int s = (n - m)/2; s >= 0; s--)
+                            {
+                                zr = zr +  R_mn[s]*rPowers[l + (n - 2*s)*WH];
+                            }
+                            Z[l + nz*WH] = N*zr*Math.cos(m*theta[l]);
+                        }
+                        if( normalize)
+                        {
+                            double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
                             for (int l = 0; l < WH; l++)
                             {
-                                zr = 0;
-                                N = Math.sqrt(n + 1);
-                                for( int s = (n - m)/2; s >= 0; s-- )
-                                {
-                                    zr = zr +  R_mn[s]*rPowers[l + (n - 2*s)*WH];
-                                }
-                                Z[l + nz*WH] = N*zr;
-                            }
-                            if( normalize)
-                            {
-                                double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
-                                for (int l = 0; l < WH; l++) // PUPIL
-                                {
-                                    Z[l + nz*WH] *= NormZ;
-                                }
+                                Z[l + nz*WH] = Z[l + nz*WH]*NormZ;
                             }
                         }
-                        else
+                    }
+                    else
+                    {
+                        /* J > 0 & J odd & m != 0 --> azimuthal part is a sine */
+                        for (int l = 0; l < WH; l++)
                         {
-                            /* J > 0 & J even & m != 0 --> azimuthal part is a cosine */
-                            if(MathUtils.even(nz + 1))
+                            N = Math.sqrt( 2*(n + 1) );
+                            zr = 0;
+                            for( int s = (n - m)/2; s >= 0; s-- )
                             {
-                                for (int l = 0; l < WH; l++)
-                                {
-                                    N = Math.sqrt( 2*(n + 1) );
-                                    zr = 0;
-                                    for( int s = (n - m)/2; s >= 0; s--)
-                                    {
-                                        zr = zr +  R_mn[s]*rPowers[l + (n - 2*s)*WH];
-                                    }
-                                    Z[l + nz*WH] = N*zr*Math.cos(m*theta[l]);
-                                }
-                                if( normalize)
-                                {
-                                    double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
-                                    for (int l = 0; l < WH; l++)
-                                    {
-                                        Z[l + nz*WH] = Z[l + nz*WH]*NormZ;
-                                    }
-                                }
+                                zr = zr + R_mn[s]*rPowers[l + (n - 2*s)*WH];
                             }
-                            else
+                            Z[l + nz*WH] = N*zr*Math.sin(m*theta[l]);
+                        }
+                        if( normalize)
+                        {
+                            double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
+                            for (int l = 0; l < WH; l++)
                             {
-                                /* J > 0 & J odd & m != 0 --> azimuthal part is a sine */
-                                for (int l = 0; l < WH; l++)
-                                {
-                                    N = Math.sqrt( 2*(n + 1) );
-                                    zr = 0;
-                                    for( int s = (n - m)/2; s >= 0; s-- )
-                                    {
-                                        zr = zr + R_mn[s]*rPowers[l + (n - 2*s)*WH];
-                                    }
-                                    Z[l + nz*WH] = N*zr*Math.sin(m*theta[l]);
-                                }
-                                if( normalize)
-                                {
-                                    double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, nz*WH, nz*WH + WH - 1, 0)));
-                                    for (int l = 0; l < WH; l++)
-                                    {
-                                        Z[l + nz*WH] = Z[l + nz*WH]*NormZ;
-                                    }
-                                }
+                                Z[l + nz*WH] = Z[l + nz*WH]*NormZ;
                             }
                         }
+                    }
+                }
             }
         }
         return Z;

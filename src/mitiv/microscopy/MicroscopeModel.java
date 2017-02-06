@@ -131,6 +131,7 @@ public abstract class MicroscopeModel
         }else if(xspace ==  phaseSpace){
             return apply_J_phi( grad);
         }else if(xspace ==  modulusSpace){
+            System.out.println("xspace modulus_coefs  "+xspace.getNumber());
             return apply_J_modulus( grad);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");
@@ -143,6 +144,7 @@ public abstract class MicroscopeModel
         }else if(param.getOwner() ==  phaseSpace){
             setPhase(param);
         }else if(param.getOwner() ==  modulusSpace){
+            System.out.println("param modulus_coefs  "+param.getNumber());
             setModulus(param);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector param does not belong to any space");
