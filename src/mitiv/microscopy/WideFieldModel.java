@@ -40,18 +40,18 @@ public class WideFieldModel extends MicroscopeModel{
     protected double radius; // radius of the pupil in meter^-1
     protected double pupil_area; // area of the pupil
     protected double[] Z; // Zernike polynomials basis
-    protected boolean[] maskPupil; // position in the where the pupil is non null including vigneting
+    protected boolean[] maskPupil; // position in the where the pupil is non null including vignetting
     protected boolean[] mapPupil; // position in the where the pupil is non null
     protected double[] rho; // pupil modulus based on Zernike polynomials
     protected double[] phi; // pupil phase based on Zernike polynomials
     protected double[] psi; // defocus function
-    protected Array4D cpxPsf; // fourier transform of the pupil function
+    protected Array4D cpxPsf; // Fourier transform of the pupil function
 
     protected Shape cpxPsfShape;
     protected Shape aShape;
     protected Shape psf2DShape;
 
-    protected  Object FFT2D;
+    // protected  Object FFT2D;
 
     protected int nModulus;
     protected int nDefocus;
@@ -85,12 +85,6 @@ public class WideFieldModel extends MicroscopeModel{
 
         computeMaskPupil();
         computeZernike();
-
-        if(single){
-            FFT2D = new FloatFFT_2D(Nx, Ny);
-        }else{
-            FFT2D = new DoubleFFT_2D(Nx, Ny);
-        }
 
         if(nModulus<1){
             nModulus = 1;
@@ -178,7 +172,8 @@ public class WideFieldModel extends MicroscopeModel{
 
                         }
                         /* Fourier transform of the pupil function A(z) */
-                        ((FloatFFT_2D) FFT2D).complexForward(A);
+                        FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
+                        FFT2D.complexForward(A);
 
                         for (int in = 0; in < Npix; in++)
                         {
@@ -232,7 +227,7 @@ public class WideFieldModel extends MicroscopeModel{
                         @Override
                         public GetPsfParaOut call() throws Exception {
                             GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,single);
-
+                            //  ConcurrencyUtils.setNumberOfThreads(1);
                             double defoc_scale;
                             double phasePupil;
                             double[] A = new double[2*Npix];
@@ -254,7 +249,11 @@ public class WideFieldModel extends MicroscopeModel{
 
                             }
                             /* Fourier transform of the pupil function A(z) */
-                            ((DoubleFFT_2D) FFT2D).complexForward(A);
+
+
+                            DoubleFFT_2D   FFT2D = new DoubleFFT_2D(Nx, Ny);
+
+                            FFT2D.complexForward(A);
 
                             for (int in = 0; in < Npix; in++)
                             {
@@ -292,6 +291,7 @@ public class WideFieldModel extends MicroscopeModel{
                 final double PSFnorm = 1.0/(Nx*Ny*Nz);
                 final int Npix = Nx*Ny;
 
+                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
 
                 for ( int iz = 0; iz < Nz; iz++)
                 {
@@ -317,7 +317,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                     }
                     /* Fourier transform of the pupil function A(z) */
-                    ((DoubleFFT_2D) FFT2D).complexForward(A);
+                    FFT2D.complexForward(A);
 
 
                     for (int iy = 0; iy < Ny; iy++){
@@ -337,6 +337,7 @@ public class WideFieldModel extends MicroscopeModel{
 
         }
         PState = 1;
+
     }
 
     /**
@@ -397,7 +398,8 @@ public class WideFieldModel extends MicroscopeModel{
                             }
 
                             /* Fourier transform of the pupil function A(z) */
-                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                            FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
 
 
                             for (int j = 0; j < Ny; j++)
@@ -448,6 +450,7 @@ public class WideFieldModel extends MicroscopeModel{
                 //  DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
                 double J[] = new double[Ny*Nx];
 
+                FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
                 for (int iz = 0; iz < Nz; iz++)
                 {
 
@@ -471,8 +474,8 @@ public class WideFieldModel extends MicroscopeModel{
 
                     }
 
+                    FFT2D.complexForward(Aq);
 
-                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
 
                     for (int in = 0; in < Npix; in++)
                     {
@@ -540,7 +543,8 @@ public class WideFieldModel extends MicroscopeModel{
                             }
 
                             /* Fourier transform of the pupil function A(z) */
-                            ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                            DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
 
                             for (int in = 0; in < Npix; in++)
                             {
@@ -623,10 +627,9 @@ public class WideFieldModel extends MicroscopeModel{
                 //     DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
                 double J[] = new double[Ny*Nx];
 
-                System.out.println("-----J-");
-                MathUtils.stat(J);
 
                 double Aq[] = new double[2*Npix];
+                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
                 for (int iz = 0; iz < Nz; iz++)
                 {
 
@@ -650,7 +653,7 @@ public class WideFieldModel extends MicroscopeModel{
                     }
 
 
-                    ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                    FFT2D.complexForward(Aq);
 
                     for (int in = 0; in < Npix; in++)
                     {
@@ -660,7 +663,6 @@ public class WideFieldModel extends MicroscopeModel{
                     }
 
                 }
-                System.out.println();
 
 
                 for (int k = 0; k < modulusSpace.getNumber(); k++)
@@ -676,10 +678,6 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-
-        System.out.println("----JRho: " + modulusSpace.getNumber());
-        MathUtils.stat(JRho.flatten());
-        System.out.println();
 
         return modulusSpace.create(JRho);
 
@@ -739,7 +737,8 @@ public class WideFieldModel extends MicroscopeModel{
                             }
 
                             /* Fourier transform of the pupil function A(z) */
-                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                            FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
 
 
                             for (int j = 0; j < Ny; j++)
@@ -794,6 +793,7 @@ public class WideFieldModel extends MicroscopeModel{
             }else{
                 double J[] = new double[Ny*Nx];
                 float[] Aq = new float[2*Npix];
+                FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
                 for (int iz = 0; iz < Nz; iz++)
                 {
 
@@ -817,7 +817,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                     }
 
-                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                    FFT2D.complexForward(Aq);
 
                     for (int in = 0; in < Npix; in++)
                     {
@@ -827,9 +827,7 @@ public class WideFieldModel extends MicroscopeModel{
                     }
                 }
 
-                System.out.println("----tmp--");
-                MathUtils.stat(J);
-                System.out.println();
+
                 for (int k = 0; k < phaseSpace.getNumber(); k++)
                 {
                     double tmp = 0;
@@ -885,8 +883,8 @@ public class WideFieldModel extends MicroscopeModel{
                             }
 
                             /* Fourier transform of the pupil function A(z) */
-                            ((DoubleFFT_2D) FFT2D).complexForward(Aq);
-
+                            DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
 
                             for (int j = 0; j < Ny; j++)
                             {
@@ -975,9 +973,6 @@ public class WideFieldModel extends MicroscopeModel{
                 }
 
 
-                System.out.println("----Jin pahse--");
-                MathUtils.stat(J);
-                System.out.println();
                 for (int k = 0; k < phaseSpace.getNumber(); k++)
                 {
                     double tmp = 0;
@@ -1083,7 +1078,9 @@ public class WideFieldModel extends MicroscopeModel{
 
                             }
                             /* Fourier transform of the pupil function A(z) */
-                            ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                            FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
+
                             for (int j = 0; j < Ny; j++)
                             {
                                 for (int i = 0; i < Nx; i++)
@@ -1128,6 +1125,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }else{
 
+                FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
                 double defoc, idef, tmpvar;
                 float Aq[] = new float[2*Npix];
 
@@ -1157,7 +1155,8 @@ public class WideFieldModel extends MicroscopeModel{
                     }
 
 
-                    ((FloatFFT_2D) FFT2D).complexForward(Aq);
+                    FFT2D.complexForward(Aq);
+
 
 
                     for (int j = 0; j < Ny; j++)
@@ -1228,7 +1227,9 @@ public class WideFieldModel extends MicroscopeModel{
 
                             }
                             /* Fourier transform of the pupil function A(z) */
-                            ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                            DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
+                            FFT2D.complexForward(Aq);
+
                             for (int j = 0; j < Ny; j++)
                             {
                                 for (int i = 0; i < Nx; i++)
@@ -1276,6 +1277,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }else{
 
+                DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
@@ -1313,7 +1315,9 @@ public class WideFieldModel extends MicroscopeModel{
 
                     }
                     /* Fourier transform of the pupil function A(z) */
-                    ((DoubleFFT_2D) FFT2D).complexForward(Aq);
+                    FFT2D.complexForward(Aq);
+
+
                     for (int j = 0; j < Ny; j++)
                     {
                         for (int i = 0; i < Nx; i++)
@@ -1353,9 +1357,7 @@ public class WideFieldModel extends MicroscopeModel{
                 break;
         }
 
-        System.out.println("--------------");
-        System.out.println("grd");
-        MathUtils.printArray(grd);
+
         return  defocusSpace.create(Double1D.wrap(grd, defocusSpace.getShape()));
 
     }
@@ -1538,7 +1540,7 @@ public class WideFieldModel extends MicroscopeModel{
         }else{
             throw new IllegalArgumentException("DoubleShapedVector beta does not belong to the modulus space");
         }
-        System.out.println("beta  "+beta.getNumber());
+
         int Npix = Nx*Ny;
         rho = new double[Npix];
         //    double betaNorm = 1./(Math.sqrt(MathUtils.innerProd(modulus_coefs, modulus_coefs)));
@@ -1551,16 +1553,13 @@ public class WideFieldModel extends MicroscopeModel{
                 for (int n = 0; n < beta.getNumber(); n++)
                 {
                     rho[in] += Z[in + n*Npix]*beta.get(n)*betaNorm;
-                    //System.out.println("beta("+n+") = "+beta.get(n));
                 }
 
 
             }
         }
 
-        System.out.println("----RHO----");
-        MathUtils.stat(rho);
-        System.out.println();
+
         freePSF();
     }
 
@@ -1795,7 +1794,6 @@ public class WideFieldModel extends MicroscopeModel{
         if(nModulus<1){
             nModulus = 1;
         }
-        System.out.println("nmodulus  "+nModulus);
 
         modulusSpace =  new DoubleShapedVectorSpace(nModulus);
 
@@ -1807,7 +1805,6 @@ public class WideFieldModel extends MicroscopeModel{
         computeZernike();
         modulus_coefs = modulusSpace.create(0.);
         modulus_coefs.set(0, 1.);
-        System.out.println("modulus_coefs  "+modulus_coefs.getNumber());
 
         setModulus(modulus_coefs);
 
