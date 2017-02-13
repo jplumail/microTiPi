@@ -35,6 +35,8 @@ public class WideFieldModel extends MicroscopeModel{
     protected double deltaY=0;    // position in X of the center of the defocus function inside the pupil
     protected int Nzern; // number of Zernike modes
 
+    protected boolean radial=false; // when true, the PSF is radially symmetric
+
     protected double lambda; // the emission wavelength in meters
     protected double NA; // the numerical aperture
     protected double ni; // the refractive index of the immersion medium
@@ -69,7 +71,7 @@ public class WideFieldModel extends MicroscopeModel{
     public WideFieldModel(Shape psfShape,int nPhase, int nModulus,
             double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single) {
 
-        super(psfShape,    dxy, dz,  radial, single);
+        super(psfShape,    dxy, dz, single);
         if(Nx != Ny){
             throw new IllegalArgumentException("Nx should equal Ny");
         }

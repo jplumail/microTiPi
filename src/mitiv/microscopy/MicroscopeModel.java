@@ -62,7 +62,6 @@ public abstract class MicroscopeModel
     protected int Nx; // number of samples along lateral X-dimension
     protected int Ny; // number of samples along lateral Y-dimension
     protected int Nz; // number of samples along axial Z-dimension
-    protected boolean radial=false; // when true, the PSF is radially symmetric
     protected boolean single = false;
 
     protected Shape psfShape;
@@ -101,11 +100,10 @@ public abstract class MicroscopeModel
      */
     public MicroscopeModel(Shape psfShape,
             double dxy, double dz,
-            boolean radial,boolean single)
+            boolean single)
     {
         this.dxy = dxy;
         this.dz = dz;
-        this.radial = radial;
 
         if (psfShape.rank() !=3){
             throw new IllegalArgumentException("PSF rank should be 3");
