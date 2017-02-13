@@ -34,7 +34,10 @@ public class WideFieldModel extends MicroscopeModel{
     protected double deltaX=0;   // position in X of the center of the defocus function inside the pupil
     protected double deltaY=0;    // position in X of the center of the defocus function inside the pupil
     protected int Nzern; // number of Zernike modes
+
     protected double lambda; // the emission wavelength in meters
+    protected double NA; // the numerical aperture
+    protected double ni; // the refractive index of the immersion medium
 
     protected double lambda_ni;  // (ni / \lambda)
     protected double radius; // radius of the pupil in meter^-1
@@ -59,22 +62,21 @@ public class WideFieldModel extends MicroscopeModel{
 
     private boolean para=true;
 
-    public WideFieldModel(Shape psfShape,
-            double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single){
-        this( psfShape,0, 0,
-                NA,  lambda,  ni,  dxy,  dz,  radial,  single) ;
+    public WideFieldModel(Shape psfShape, double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single){
+        this( psfShape,0, 0, NA,  lambda,  ni,  dxy,  dz,  radial,  single) ;
     }
 
     public WideFieldModel(Shape psfShape,int nPhase, int nModulus,
             double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single) {
 
-        super(psfShape,  NA,  ni, dxy, dz,  radial, single);
+        super(psfShape,    dxy, dz,  radial, single);
         if(Nx != Ny){
             throw new IllegalArgumentException("Nx should equal Ny");
         }
         this.lambda = lambda;
         this.ni = ni;
         this.Nzern = 4;
+        this.NA = NA;
         this.radius = NA/lambda;
         this.lambda_ni = ni/lambda;
         this.phi = new double[Ny*Nx];

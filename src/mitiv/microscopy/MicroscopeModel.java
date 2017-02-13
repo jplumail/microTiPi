@@ -57,8 +57,6 @@ public abstract class MicroscopeModel
     protected int PState=0;   // flag to prevent useless recomputation of the PSF
     protected final static boolean NORMALIZED = true;
     protected static final double DEUXPI = 2*Math.PI;
-    protected double NA; // the numerical aperture
-    protected double ni; // the refractive index of the immersion medium
     protected double dxy; // the lateral pixel size in meter
     protected double dz; // the axial sampling step size in meter
     protected int Nx; // number of samples along lateral X-dimension
@@ -67,7 +65,6 @@ public abstract class MicroscopeModel
     protected boolean radial=false; // when true, the PSF is radially symmetric
     protected boolean single = false;
 
-    //   protected ShapedVectorSpace psfSpace; //3D point spread function
     protected Shape psfShape;
     protected Array3D psf; //3D point spread function
 
@@ -94,9 +91,7 @@ public abstract class MicroscopeModel
     // abstract protected  DoubleShapedVector apply_Jacobian(DoubleShapedVector phase);
 
     /** Initialize the WFFM PSF model containing parameters
-     *  @param NA numerical aperture
-     *  @param lambda emission wavelength
-     *  @param ni refractive index of the immersion medium
+     *  @param psfShape shape of the PSF array
      *  @param dxy lateral pixel size
      *  @param dz axial sampling step size
      *  @param Nx number of samples along lateral X-dimension
@@ -105,12 +100,9 @@ public abstract class MicroscopeModel
      *  @param radial when true use only radial zernike polynomial
      */
     public MicroscopeModel(Shape psfShape,
-            double NA, double ni,
             double dxy, double dz,
             boolean radial,boolean single)
     {
-        this.NA = NA;
-        this.ni = ni;
         this.dxy = dxy;
         this.dz = dz;
         this.radial = radial;
