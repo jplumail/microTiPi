@@ -23,7 +23,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package mitiv.microscopy;
+package microscopy;
 
 import mitiv.old.MathUtils;
 /** Compute Zernike polynomials

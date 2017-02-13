@@ -1,4 +1,4 @@
-package mitiv.microscopy;
+package microscopy;
 
 public class MicroscopeMetadata {
     //Just a public object with all psf values inside
