@@ -1,4 +1,4 @@
-package biphoton;
+package microTiPi.biphoton;
 
 import mitiv.microscopy.MicroscopeModel;
 

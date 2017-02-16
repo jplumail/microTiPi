@@ -23,7 +23,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microscopy;
+package microTiPi.microscopy;
 
 import mitiv.array.Array3D;
 import mitiv.array.ShapedArray;

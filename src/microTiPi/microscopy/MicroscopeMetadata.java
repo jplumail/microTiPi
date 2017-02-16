@@ -1,4 +1,4 @@
-package microscopy;
+package microTiPi.microscopy;
 
 public class MicroscopeMetadata {
     //Just a public object with all psf values inside

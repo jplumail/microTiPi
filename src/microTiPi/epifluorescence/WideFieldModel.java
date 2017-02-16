@@ -1,4 +1,4 @@
-package epifluorescence;
+package microTiPi.epifluorescence;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,8 +12,8 @@ import java.util.concurrent.Future;
 import org.jtransforms.fft.DoubleFFT_2D;
 import org.jtransforms.fft.FloatFFT_2D;
 
-import microscopy.MicroscopeModel;
-import microscopy.Zernike;
+import microTiPi.microUtils.Zernike;
+import microTiPi.microscopy.MicroscopeModel;
 import mitiv.array.Array3D;
 import mitiv.array.Array4D;
 import mitiv.array.Double1D;

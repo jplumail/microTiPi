@@ -1,4 +1,4 @@
-package microscopy;
+package microTiPi.microscopy;
 
 import mitiv.base.Traits;
 
