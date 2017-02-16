@@ -155,7 +155,7 @@ public class Zernike
 
         if( normalize)
         {
-            double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, 0, width + WH - 1, 0)));
+            double NormZ = 1/Math.sqrt(MathUtils.sum(MathUtils.abs2(Z, 0,  WH - 1, 0)));
             for (int l = 0; l < WH; l++) // PUPIL
             {
                 Z[l] = Z[l]*NormZ;

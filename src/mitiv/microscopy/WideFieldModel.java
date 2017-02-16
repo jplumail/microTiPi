@@ -1821,11 +1821,16 @@ public class WideFieldModel extends MicroscopeModel{
 
         modulusSpace =  new DoubleShapedVectorSpace(nModulus);
 
-        if(radial){
-            Nzern = Math.max(phaseSpace.getNumber()+1, nModulus);
+        if (phaseSpace==null){
+            Nzern = nModulus;
         }else{
-            Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
+            if(radial){
+                Nzern = Math.max(phaseSpace.getNumber()+1, nModulus);
+            }else{
+                Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
+            }
         }
+
         computeZernike();
         modulus_coefs = modulusSpace.create(0.);
         modulus_coefs.set(0, 1.);
