@@ -136,21 +136,9 @@ public class PSF_Estimation  {
             objSpace = new DoubleShapedVectorSpace(dataShape);
         }
 
-        //        if (result != null) {
-        //            /* We try to keep the previous result, at least its dimensions
-        //             * must match. */
-        //            for (int k = 0; k < rank; ++k) {
-        //                if (result.getDimension(k) != data.getDimension(k)) {
-        //                    result = null;
-        //                    break;
-        //                }
-        //            }
-        //        }
-
         // Initialize a vector space and populate it with workspace vectors.
 
         DoubleShapedVectorSpace variableSpace = x.getSpace();
-        //  result = ArrayFactory.wrap(x.getData(), xShape);
         int[] off ={0,0, 0};
         // Build convolution operator.
         WeightedConvolutionCost fdata = WeightedConvolutionCost.build(objSpace, dataSpace);
@@ -359,17 +347,6 @@ public class PSF_Estimation  {
         this.psf = psf;
     }
 
-    //    // @Override
-    //    public DoubleArray getResult() {
-    //        /* Nothing else to do because the actual result is in a vector
-    //         * which shares the contents of the ShapedArray.  Otherwise,
-    //         * some kind of synchronization is needed. */
-    //        return result;
-    //    }
-    //
-    //    public void setResult(DoubleArray result) {
-    //        this.result = result;
-    //    }
 
     // @Override
     public int getIterations() {

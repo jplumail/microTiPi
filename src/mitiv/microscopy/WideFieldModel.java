@@ -1530,6 +1530,14 @@ public class WideFieldModel extends MicroscopeModel{
         computeDefocus();
         freePSF();
     }
+
+    public void setDefocus(double[] defoc) {
+        if (defocusSpace==null){
+            defocusSpace = new DoubleShapedVectorSpace(3);
+        }
+        defocus_coefs =   defocusSpace.wrap(defoc);
+        setDefocus(defocus_coefs);
+    }
     /**
      * Compute the modulus ρ on a Zernike polynomial basis
      * <p>
@@ -1558,13 +1566,15 @@ public class WideFieldModel extends MicroscopeModel{
                 {
                     rho[in] += Z[in + n*Npix]*beta.get(n)*betaNorm;
                 }
-
-
             }
         }
-
-
         freePSF();
+    }
+
+    public void setModulus(double[] beta) {
+        setNModulus(beta.length);
+        modulus_coefs = modulusSpace.wrap(beta);
+        setModulus(modulus_coefs);
     }
 
     @Override
@@ -1598,6 +1608,16 @@ public class WideFieldModel extends MicroscopeModel{
     }
 
 
+    public void setPhase(double[] alpha) {
+        if((alpha==null)||(alpha.length==0)){
+            nPhase=0;
+        }
+        else{
+            setNPhase(alpha.length);
+            phase_coefs = phaseSpace.wrap(alpha);
+            setPhase(phase_coefs) ;
+        }
+    }
 
 
 
