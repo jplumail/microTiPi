@@ -67,8 +67,9 @@ public class WideFieldModel extends MicroscopeModel{
     private boolean para=true;
 
     public WideFieldModel(Shape psfShape, double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single){
-        this( psfShape,0, 0, NA,  lambda,  ni,  dxy,  dz,  radial,  single) ;
+        this( psfShape,0, 1, NA,  lambda,  ni,  dxy,  dz,  radial,  single) ;
     }
+
 
     public WideFieldModel(Shape psfShape,int nPhase, int nModulus,
             double NA, double lambda, double ni, double dxy, double dz, boolean radial, boolean single) {
@@ -85,31 +86,23 @@ public class WideFieldModel extends MicroscopeModel{
         this.lambda_ni = ni/lambda;
         this.phi = new double[Ny*Nx];
         this.psi = new double[Ny*Nx];
+        this.radial = radial;
         cpxPsfShape = new Shape(2,Nx, Ny,  Nz);
         aShape = new Shape(2,Nx, Ny);
         psf2DShape = new Shape(Nx, Ny);
 
         computeMaskPupil();
-        computeZernike();
 
-        if(nModulus<1){
-            nModulus = 1;
+        this.nModulus = nModulus;
+        if(this.nModulus<1){
+            this.nModulus = 1;
         }
 
-        defocusSpace = new DoubleShapedVectorSpace(3);
-        defocus_coefs =   defocusSpace.wrap((new double[] {ni/lambda, deltaX, deltaY}));
-        setDefocus(defocus_coefs);
+        this.nPhase= nPhase;
+        setNModulus();
+        setNPhase();
+        setDefocus();
 
-        if(nPhase>0){
-            phaseSpace = new DoubleShapedVectorSpace(nPhase);
-            phase_coefs = phaseSpace.create(0.);
-            setPhase(phase_coefs);
-        }
-
-        modulusSpace =  new DoubleShapedVectorSpace(nModulus);
-        modulus_coefs = modulusSpace.create(0.);
-        modulus_coefs.set(0, 1.);
-        setModulus(modulus_coefs);
 
 
 
@@ -148,7 +141,6 @@ public class WideFieldModel extends MicroscopeModel{
             ExecutorService service = Executors.newFixedThreadPool(threads);
 
             List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
-            //    ConcurrencyUtils.setNumberOfThreads(1);
             for ( int iz = 0; iz < Nz; iz++)
             {
                 final int iz1 = iz;
@@ -196,7 +188,6 @@ public class WideFieldModel extends MicroscopeModel{
 
             service.shutdown();
 
-            //    List<Output> outputs = new ArrayList<Output>();
             for (Future<GetPsfParaOut> future : futures) {
                 GetPsfParaOut output;
                 try {
@@ -214,7 +205,6 @@ public class WideFieldModel extends MicroscopeModel{
         }else{
 
             if(para){
-                //   this.psf = new double[Nz*Ny*Nx];
                 cpxPsf = Double4D.create(  cpxPsfShape);
                 psf = Double3D.create( psfShape);
 
@@ -225,7 +215,6 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
-                //      ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final int iz1 = iz;
@@ -233,7 +222,6 @@ public class WideFieldModel extends MicroscopeModel{
                         @Override
                         public GetPsfParaOut call() throws Exception {
                             GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,single);
-                            //  ConcurrencyUtils.setNumberOfThreads(1);
                             double defoc_scale;
                             double phasePupil;
                             double[] A = new double[2*Npix];
@@ -358,7 +346,6 @@ public class WideFieldModel extends MicroscopeModel{
         final int Npix = Nx*Ny;
         double defoc_scale = 0.;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
-        //   double Aq[] = new double[2*Npix];
         final double NBeta =1./modulus_coefs.norm2();
         Double1D JRho =  Double1D.create(modulusSpace.getShape());
 
@@ -370,7 +357,6 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-                //       ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
@@ -435,7 +421,6 @@ public class WideFieldModel extends MicroscopeModel{
 
                 service.shutdown();
 
-                //    List<Output> outputs = new ArrayList<Output>();
                 for (Future<ApplyJPhaOut> future : futures) {
                     ApplyJPhaOut pout;
                     try {
@@ -453,7 +438,6 @@ public class WideFieldModel extends MicroscopeModel{
                     }
                 }
             }else{
-                //  DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
                 double J[] = new double[Ny*Nx];
 
                 FloatFFT_2D FFT2D = new FloatFFT_2D(Nx, Ny);
@@ -515,8 +499,7 @@ public class WideFieldModel extends MicroscopeModel{
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
-                    //    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); //FIXME Remove flatten
                     final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
                     final int iz1 = iz;
                     Callable<double[]> callable = new Callable<double[]>() {
@@ -680,7 +663,6 @@ public class WideFieldModel extends MicroscopeModel{
                         tmp += J[in]*Z[Ci];
                     }
                     JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
-                    //  JRho.set(k,2*PSFNorm*tmp);
                 }
             }
         }
@@ -709,7 +691,6 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-                //        ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
@@ -855,7 +836,6 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
-                //        ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
@@ -1008,11 +988,9 @@ public class WideFieldModel extends MicroscopeModel{
     public DoubleShapedVector apply_J_defocus(ShapedVector q)
     {
 
-        // long startTime = System.currentTimeMillis();
 
         double scale_x = 1/(Nx*dxy);
         double scale_y = 1/(Ny*dxy);
-        //  double defoc, tmpvar, idef;
         double d0 = 0, d1 = 0, d2 = 0;
         final double[] rx = new double[Nx];
         final double[] ry = new double[Ny];
@@ -1048,7 +1026,6 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
-                //  ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
 
@@ -1192,13 +1169,11 @@ public class WideFieldModel extends MicroscopeModel{
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
                 List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
-                //  ConcurrencyUtils.setNumberOfThreads(1);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); // FIXME remove flatten
                     final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
 
-                    //      final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
                     final int iz1 = iz;
                     Callable<double[]> callable = new Callable<double[]>() {
                         @Override
@@ -1286,7 +1261,7 @@ public class WideFieldModel extends MicroscopeModel{
                 DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten();
+                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); // FIXME remove flatten
                     final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
 
                     //      final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
@@ -1495,7 +1470,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-        freePSF();
+        //        freePSF();
     }
 
 
@@ -1540,6 +1515,9 @@ public class WideFieldModel extends MicroscopeModel{
         defocus_coefs =   defocusSpace.wrap(defoc);
         setDefocus(defocus_coefs);
     }
+    public void setDefocus() {
+        setDefocus(new double[] {ni/lambda, deltaX, deltaY});
+    }
     /**
      * Compute the modulus ρ on a Zernike polynomial basis
      * <p>
@@ -1557,7 +1535,6 @@ public class WideFieldModel extends MicroscopeModel{
 
         int Npix = Nx*Ny;
         rho = new double[Npix];
-        //    double betaNorm = 1./(Math.sqrt(MathUtils.innerProd(modulus_coefs, modulus_coefs)));
         double betaNorm = 1./( beta.norm2());
         for(int in = 0; in < Npix; in++)
         {
@@ -1801,7 +1778,7 @@ public class WideFieldModel extends MicroscopeModel{
         MathUtils.stat(Z);
     }
 
-    public void setNPhase(int nPhase) {
+    public void setNPhase() {
         if(nPhase>0){
             phaseSpace = new DoubleShapedVectorSpace(nPhase);
             if(radial){
@@ -1816,7 +1793,28 @@ public class WideFieldModel extends MicroscopeModel{
             phaseSpace = null;
         }
     }
-    public void setNModulus(int nModulus) {
+
+    public void setNPhase(int nPh ) {
+        nPhase = nPh;
+        if(nPhase>0){
+            phaseSpace = new DoubleShapedVectorSpace(nPhase);
+            if(radial){
+                Nzern = Math.max(nPhase+1, modulusSpace.getNumber());
+            }else{
+                Nzern = Math.max(nPhase+3, modulusSpace.getNumber());
+            }
+            computeZernike();
+            phase_coefs = phaseSpace.create(0.);
+            setPhase(phase_coefs);
+        }else{
+            phaseSpace = null;
+        }
+    }
+
+
+
+    public void setNModulus(int nMod) {
+        nModulus = nMod ;
         if(nModulus<1){
             nModulus = 1;
         }
@@ -1838,8 +1836,30 @@ public class WideFieldModel extends MicroscopeModel{
         modulus_coefs.set(0, 1.);
 
         setModulus(modulus_coefs);
+    }
 
+    public void setNModulus() {
+        if(nModulus<1){
+            nModulus = 1;
+        }
 
+        modulusSpace =  new DoubleShapedVectorSpace(nModulus);
+
+        if (phaseSpace==null){
+            Nzern = nModulus;
+        }else{
+            if(radial){
+                Nzern = Math.max(phaseSpace.getNumber()+1, nModulus);
+            }else{
+                Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
+            }
+        }
+
+        computeZernike();
+        modulus_coefs = modulusSpace.create(0.);
+        modulus_coefs.set(0, 1.);
+
+        setModulus(modulus_coefs);
     }
 
 
