@@ -245,7 +245,7 @@ public class PSF_Estimation  {
             }
 
             if (minimizer.getEvaluations() >= maxeval) {
-                System.err.format("Warning: too many evaluation (%d).\n", maxeval);
+                System.out.format("Warning: too many evaluation (%d).\n", maxeval);
                 break;
             }
             task = minimizer.iterate(x, fcost, gX);
