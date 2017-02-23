@@ -43,7 +43,7 @@ public class WideFieldModel extends MicroscopeModel{
     protected double NA; // the numerical aperture
     protected double ni; // the refractive index of the immersion medium
 
-    protected double lambda_ni;  // (ni / \lambda)
+    protected double lambda_ni;  // (ni / \lambda)  FIXME Useless, should be removed
     protected double radius; // radius of the pupil in meter^-1
     protected double pupil_area; // area of the pupil
     protected double[] Z; // Zernike polynomials basis
@@ -1496,6 +1496,7 @@ public class WideFieldModel extends MicroscopeModel{
                 deltaY = defoc.get(2);
             case 1:
                 lambda_ni = defoc.get(0);
+                ni = lambda_ni * lambda;
                 break;
             case 2:
                 deltaX = defoc.get(1);
@@ -1518,6 +1519,17 @@ public class WideFieldModel extends MicroscopeModel{
     public void setDefocus() {
         setDefocus(new double[] {ni/lambda, deltaX, deltaY});
     }
+
+
+
+    public void setPupilAxis(double[] axis) {
+        if (defocusSpace==null){
+            defocusSpace = new DoubleShapedVectorSpace(3);
+        }
+        defocus_coefs =   defocusSpace.wrap(new double[] {ni/lambda, axis[0], axis[1]});
+        setDefocus(defocus_coefs);
+    }
+
     /**
      * Compute the modulus ρ on a Zernike polynomial basis
      * <p>
@@ -1626,6 +1638,17 @@ public class WideFieldModel extends MicroscopeModel{
         return ni;
     }
 
+    public void setNi(Double value) {
+        ni = value;
+        lambda_ni = ni/lambda;
+
+        if (defocusSpace==null){
+            defocusSpace = new DoubleShapedVectorSpace(3);
+        }
+        defocus_coefs =   defocusSpace.wrap(new double[] {ni/lambda, deltaX, deltaY});
+        setDefocus(defocus_coefs);
+    }
+
 
     /**
      * @return the phase of the pupil
@@ -1684,6 +1707,17 @@ public class WideFieldModel extends MicroscopeModel{
         }
         double[] defocus = {lambda_ni, deltaX, deltaY};
         return defocus;
+    }
+
+    /**
+     * @return PupilShift coefficients
+     */
+    public double[] getPupilShift() {
+        if (PState<1){
+            computePSF();
+        }
+        double[] shift = { deltaX, deltaY};
+        return shift;
     }
 
 
@@ -1884,5 +1918,7 @@ public class WideFieldModel extends MicroscopeModel{
     public int getNPhase() {
         return phase_coefs.getNumber();
     }
+
+
 }
 
