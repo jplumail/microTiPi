@@ -54,13 +54,11 @@ public class PSF_Estimation  {
     private int maxeval = 20;
     private ShapedArray data = null;
     private ShapedArray obj = null;
-    //  private DoubleArray result = null;
     private ShapedArray psf = null;
     private double fcost = 0.0;
     private ShapedVector gcost = null;
     private MicroscopeModel pupil = null;
     private ReverseCommunicationOptimizer minimizer = null;
-    //   private ReconstructionViewer viewer = null;
     private  ShapedArray weights = null;
     private boolean single;
 
@@ -150,8 +148,6 @@ public class PSF_Estimation  {
             System.out.println("Vector space initialization complete.");
         }
 
-        // Build the cost functions
-        //   fcost = 0.0;
         gcost = objSpace.create();
         fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPSF() ), gcost, true);
         best_cost = fcost;
@@ -190,14 +186,12 @@ public class PSF_Estimation  {
         vmlmb.setAbsoluteTolerance(gatol);
         vmlmb.setRelativeTolerance(grtol);
         minimizer = vmlmb;
-        //
 
         if (debug) {
             System.out.println("Optimization method initialization complete.");
         }
 
         DoubleShapedVector gX = variableSpace.create();
-        // Launch the non linear conjugate gradient
         OptimTask task = minimizer.start();
         while (run) {
             if (task == OptimTask.COMPUTE_FG) {
@@ -218,9 +212,6 @@ public class PSF_Estimation  {
                 gX =  pupil.apply_Jacobian(gcost,x.getSpace());
 
             } else if (task == OptimTask.NEW_X || task == OptimTask.FINAL_X) {
-                /*   if (viewer != null) {
-                    viewer.display(this);
-                }*/
                 boolean stop = (task == OptimTask.FINAL_X);
                 if (! stop && maxiter >= 0 && minimizer.getIterations() >= maxiter) {
                     if (debug){
@@ -251,7 +242,6 @@ public class PSF_Estimation  {
             task = minimizer.iterate(x, fcost, gX);
 
         }
-        //  pupil.setParam(best_x);
 
         if(flag == DEFOCUS)
         {
@@ -320,12 +310,6 @@ public class PSF_Estimation  {
     public void setWeight(ShapedArray shapedArray){
         this.weights = shapedArray;
     }
-    /* public ReconstructionViewer getViewer() {
-        return viewer;
-    }
-    public void setViewer(ReconstructionViewer rv) {
-        viewer = rv;
-    }*/
     public void setPupil(MicroscopeModel pupil) {
         this.pupil = pupil;
     }
@@ -378,7 +362,6 @@ public class PSF_Estimation  {
         return (gcost == null ? 0.0 : gcost.normInf());
     }
     public void setObj(ShapedArray objArray) {
-        // TODO Auto-generated method stub
         this.obj = objArray;
 
     }
