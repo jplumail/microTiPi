@@ -87,7 +87,6 @@ public abstract class MicroscopeModel
 
     abstract public void freePSF();
 
-    // abstract protected  DoubleShapedVector apply_Jacobian(DoubleShapedVector phase);
 
     /** Initialize the WFFM PSF model containing parameters
      *  @param psfShape shape of the PSF array

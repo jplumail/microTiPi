@@ -58,8 +58,6 @@ public class WideFieldModel extends MicroscopeModel{
     protected Shape aShape;
     protected Shape psf2DShape;
 
-    // protected  Object FFT2D;
-
     protected int nModulus;
     protected int nDefocus;
     protected int nPhase;
@@ -130,7 +128,6 @@ public class WideFieldModel extends MicroscopeModel{
         if (PState>0)
             return;
         if(single){
-            //   this.psf = new double[Nz*Ny*Nx];
             cpxPsf = Float4D.create(  cpxPsfShape);
             psf = Float3D.create( psfShape);
 
@@ -249,7 +246,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             FFT2D.complexForward(A);
 
-                            for (int in = 0; in < Npix; in++)
+                            for (int in = 0; in < Npix; in++)// FIXME use ShapedArray
                             {
                                 ((double[])output.outA)[2*in] = A[2*in];
                                 ((double[])output.outA)[2*in + 1] = -A[2*in + 1]; // store conjugate of A
@@ -340,7 +337,7 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the gradient of this criterion in the modulus coefficients space.
      */
     @Override
-    public  DoubleShapedVector apply_J_modulus( ShapedVector q)
+    public  DoubleShapedVector apply_J_modulus(final ShapedVector q)
     {
         int Ci;
         final int Npix = Nx*Ny;
@@ -498,9 +495,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                 for ( int iz = 0; iz < Nz; iz++)
                 {
-
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); //FIXME Remove flatten
-                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
+                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
                     final int iz1 = iz;
                     Callable<double[]> callable = new Callable<double[]>() {
                         @Override
@@ -522,11 +517,10 @@ public class WideFieldModel extends MicroscopeModel{
                             for (int iy = 0; iy < Ny; iy++){
                                 for (int ix = 0; ix < Nx; ix++){
                                     int in = (ix+Nx*iy);
-                                    double qin =  qz[in];
-                                    //   Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                    //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
-                                    Aq[2*in]=   Az[2*in]*qin;
-                                    Aq[2*in+1]=  Az[2*in +1]*qin;
+                                    double qin =  qz.get(ix, iy);
+
+                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
                                 }
 
                             }
@@ -613,7 +607,6 @@ public class WideFieldModel extends MicroscopeModel{
                     }
                 }
             }else{
-                //     DoubleFFT_2D FFT2D = new DoubleFFT_2D(Ny, Nx);
                 double J[] = new double[Ny*Nx];
 
 
@@ -1171,8 +1164,7 @@ public class WideFieldModel extends MicroscopeModel{
                 List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); // FIXME remove flatten
-                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
+                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
 
                     final int iz1 = iz;
                     Callable<double[]> callable = new Callable<double[]>() {
@@ -1183,7 +1175,6 @@ public class WideFieldModel extends MicroscopeModel{
                             double defoc_scale=0;
                             double Aq[] = new double[2*Npix];
                             double defoc;
-                            //  ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
                             double[] dout = new double[3];
                             if (iz1 > Nz/2)
                             {
@@ -1199,11 +1190,9 @@ public class WideFieldModel extends MicroscopeModel{
                             for (int iy = 0; iy < Ny; iy++){
                                 for (int ix = 0; ix < Nx; ix++){
                                     int in = (ix+Nx*iy);
-                                    //  double qin =  qz.get(ix, iy);
-                                    //  Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                                    //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
-                                    Aq[2*in]=   Az[2*in]*qz[in];
-                                    Aq[2*in+1]=  Az[2*in+1]*qz[in];
+                                    double qin =  qz.get(ix, iy);
+                                    Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                                    Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
                                 }
 
                             }
@@ -1261,18 +1250,15 @@ public class WideFieldModel extends MicroscopeModel{
                 DoubleFFT_2D FFT2D = new DoubleFFT_2D(Nx, Ny);
                 for ( int iz = 0; iz < Nz; iz++)
                 {
-                    final double[] qz = ((Double3D) q.asShapedArray()).slice(iz).flatten(); // FIXME remove flatten
-                    final double[] Az = ((Double4D) cpxPsf).slice(iz).flatten();
 
-                    //      final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
+                    final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
                     final int iz1 = iz;
 
 
                     double defoc_scale=0;
                     double Aq[] = new double[2*Npix];
                     double defoc;
-                    //  ApplyJDefOut dout = new ApplyJDefOut(0,0,0);
-                    // double[] dout = new double[3];
+
                     if (iz1 > Nz/2)
                     {
                         defoc = (iz1 - Nz)*dz;
@@ -1287,11 +1273,9 @@ public class WideFieldModel extends MicroscopeModel{
                     for (int iy = 0; iy < Ny; iy++){
                         for (int ix = 0; ix < Nx; ix++){
                             int in = (ix+Nx*iy);
-                            //  double qin =  qz.get(ix, iy);
-                            //  Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
-                            //  Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
-                            Aq[2*in]=   Az[2*in]*qz[in];
-                            Aq[2*in+1]=  Az[2*in+1]*qz[in];
+                            double qin =  qz.get(ix, iy);
+                            Aq[2*in]=  ((Double4D) cpxPsf).get(0, ix, iy, iz1 )*qin;
+                            Aq[2*in+1]=  ((Double4D) cpxPsf).get(1, ix, iy, iz1 )*qin;
                         }
 
                     }
