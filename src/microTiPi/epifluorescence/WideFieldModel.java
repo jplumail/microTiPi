@@ -27,11 +27,30 @@ import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
+import mitiv.linalg.shaped.ShapedVectorSpace;
 import mitiv.old.MathUtils;
 
+
+/**
+ * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)
+ * <p>
+ * The 3D PSF is modeled after a parameterized pupil function. It is a monochromatic
+ * scalar model that defines the 3D PSF h from pupil function p.
+ * Both modulus ρ(i,j) and phase φ(i,j) of pupil function p are expressed on a basis
+ * of Zernike polynomials Zn.
+ * <p>
+ * A(z) = ρ.exp(iΦ(z)) with Φ(z) = φ + z.ψ
+ * where ψ is the defocus function :  ψ
+ * <p>
+ * <p>
+ * References:
+ * [1] Yves Tourneur & Eric Thiébaut, Ferreol Soulez, Loïc Denis.
+ * Blind deconvolution of 3d data in wide field fluorescence microscopy.
+ * <p>
+ * @version
+ * @author Ferréol Soulez    <ferreol.soulez@epfl.ch>
+ */
 public class WideFieldModel extends MicroscopeModel{
-
-
 
     protected double deltaX=0;   // position in X of the center of the defocus function inside the pupil
     protected double deltaY=0;    // position in X of the center of the defocus function inside the pupil
@@ -57,6 +76,14 @@ public class WideFieldModel extends MicroscopeModel{
     protected Shape cpxPsfShape;
     protected Shape aShape;
     protected Shape psf2DShape;
+
+    protected DoubleShapedVectorSpace defocusSpace;
+    protected DoubleShapedVectorSpace phaseSpace;
+    protected DoubleShapedVectorSpace modulusSpace;
+    protected DoubleShapedVector modulus_coefs;  // array of Zernike coefficients that describe the modulus
+    protected DoubleShapedVector phase_coefs;  // array of Zernike coefficients that describe the phase
+    protected DoubleShapedVector defocus_coefs;  // array of Zernike coefficients that describe the phase
+
 
     protected int nModulus;
     protected int nDefocus;
@@ -331,12 +358,39 @@ public class WideFieldModel extends MicroscopeModel{
 
     }
 
+    @Override
+    public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace){
+        if(xspace ==  defocusSpace){
+            return apply_J_defocus( grad);
+        }else if(xspace ==  phaseSpace){
+            return apply_J_phase( grad);
+        }else if(xspace ==  modulusSpace){
+            System.out.println("xspace modulus_coefs  "+xspace.getNumber());
+            return apply_J_modulus( grad);
+        }else{
+            throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");
+        }
+    }
+
+    @Override
+    public  void setParam(DoubleShapedVector param) {
+        if(param.getOwner() ==  defocusSpace){
+            setDefocus(param);
+        }else if(param.getOwner() ==  phaseSpace){
+            setPhase(param);
+        }else if(param.getOwner() ==  modulusSpace){
+            System.out.println("param modulus_coefs  "+param.getNumber());
+            setModulus(param);
+        }else{
+            throw new IllegalArgumentException("DoubleShapedVector param does not belong to any space");
+        }
+    }
+
     /**
      * Apply the Jacobian matrix to go from  the PSF space to modulus coefficients space.
      * @param q : the gradient of some criterion in the PSF space
      * @return the gradient of this criterion in the modulus coefficients space.
      */
-    @Override
     public  DoubleShapedVector apply_J_modulus(final ShapedVector q)
     {
         int Ci;
@@ -670,8 +724,7 @@ public class WideFieldModel extends MicroscopeModel{
      * @param q : the gradient of some criterion in the PSF space
      * @return the gradient of this criterion in the phase coefficients space.
      */
-    @Override
-    public DoubleShapedVector apply_J_phi(ShapedVector q)
+    public DoubleShapedVector apply_J_phase(ShapedVector q)
     {
         int Ci;
         final int Npix = Nx*Ny;
@@ -977,7 +1030,6 @@ public class WideFieldModel extends MicroscopeModel{
      * @param q : the gradient of some criterion in the PSF space
      * @return the gradient of this criterion in the defocus coefficients space.
      */
-    @Override
     public DoubleShapedVector apply_J_defocus(ShapedVector q)
     {
 
@@ -1466,7 +1518,6 @@ public class WideFieldModel extends MicroscopeModel{
      * 2 :  defocus = { \delta_x, \delta_y}
      * 1 :  defocus = {n_i / \lambda}
      */
-    @Override
     public void setDefocus(DoubleShapedVector defoc) {
         if(defoc.belongsTo(defocusSpace)){
             defocus_coefs = defoc;
@@ -1521,7 +1572,6 @@ public class WideFieldModel extends MicroscopeModel{
      * ρ = Σ_n β_n Z_n
      * @param beta Zernike coefficients
      */
-    @Override
     public void setModulus(DoubleShapedVector beta) {
         if(beta.belongsTo(modulusSpace)){
             modulus_coefs = beta;
@@ -1552,7 +1602,6 @@ public class WideFieldModel extends MicroscopeModel{
         setModulus(modulus_coefs);
     }
 
-    @Override
     public void setPhase(DoubleShapedVector phase) {
         if(phase.belongsTo(phaseSpace)){
             phase_coefs = phase;

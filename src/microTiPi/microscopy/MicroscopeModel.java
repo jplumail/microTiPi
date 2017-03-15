@@ -25,33 +25,12 @@
 
 package microTiPi.microscopy;
 
-
 import mitiv.array.Array3D;
 import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
-import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
 
-/**
- * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)
- * <p>
- * The 3D PSF is modeled after a parameterized pupil function. It is a monochromatic
- * scalar model that defines the 3D PSF h from pupil function p.
- * Both modulus ρ(i,j) and phase φ(i,j) of pupil function p are expressed on a basis
- * of Zernike polynomials Zn.
- * <p>
- * A(z) = ρ.exp(iΦ(z)) with Φ(z) = φ + 2π( z.ψ)
- * ψ the defocus function :  ψ
- * <p>
- * <p>
- * References:
- * [1] Yves Tourneur & Eric Thiébaut, Ferreol Soulez, Loïc Denis.
- * Blind deconvolution of 3d data in wide field fluorescence microscopy.
- * <p>
- * @version
- * @author Ferréol Soulez	 <ferreol.soulez@epfl.ch>
- */
 public abstract class MicroscopeModel
 {
     protected int PState=0;   // flag to prevent useless recomputation of the PSF
@@ -67,35 +46,15 @@ public abstract class MicroscopeModel
     protected Shape psfShape;
     protected Array3D psf; //3D point spread function
 
-    protected DoubleShapedVectorSpace defocusSpace;
-    protected DoubleShapedVectorSpace phaseSpace;
-    protected DoubleShapedVectorSpace modulusSpace;
-    protected DoubleShapedVector modulus_coefs;  // array of Zernike coefficients that describe the modulus
-    protected DoubleShapedVector phase_coefs;  // array of Zernike coefficients that describe the phase
-    protected DoubleShapedVector defocus_coefs;  // array of Zernike coefficients that describe the phase
 
 
-    public  abstract  void computePSF();
-    public  abstract  Array3D getPSF();
-    abstract protected DoubleShapedVector apply_J_modulus(ShapedVector grad);
-    abstract protected DoubleShapedVector apply_J_defocus(ShapedVector grad);
-    abstract protected DoubleShapedVector apply_J_phi(ShapedVector grad);
-
-    abstract protected  void setDefocus(DoubleShapedVector defoc);
-    abstract protected  void setModulus(DoubleShapedVector modulus);
-    abstract protected  void setPhase(DoubleShapedVector phase);
-
-    abstract public void freePSF();
 
 
-    /** Initialize the WFFM PSF model containing parameters
+    /** Initialize the  PSF model containing parameters
      *  @param psfShape shape of the PSF array
      *  @param dxy lateral pixel size
      *  @param dz axial sampling step size
-     *  @param Nx number of samples along lateral X-dimension
-     *  @param Ny number of samples along lateral Y-dimension
-     *  @param Nz number of samples along axial Z-dimension
-     *  @param radial when true use only radial zernike polynomial
+     *  @param single single precision flag
      */
     public MicroscopeModel(Shape psfShape,
             double dxy, double dz,
@@ -114,32 +73,19 @@ public abstract class MicroscopeModel
         this.single = single;
     }
 
-    public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace){
-        if(xspace ==  defocusSpace){
-            return apply_J_defocus( grad);
-        }else if(xspace ==  phaseSpace){
-            return apply_J_phi( grad);
-        }else if(xspace ==  modulusSpace){
-            System.out.println("xspace modulus_coefs  "+xspace.getNumber());
-            return apply_J_modulus( grad);
-        }else{
-            throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");
-        }
-    }
+    /**
+     *
+     */
+    abstract public void computePSF();
+    abstract public Array3D getPSF();
+    abstract public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace);
+    abstract   public  void setParam(DoubleShapedVector param);
+    abstract public void freePSF();
 
-    protected  void setParam(DoubleShapedVector param) {
-        if(param.getOwner() ==  defocusSpace){
-            setDefocus(param);
-        }else if(param.getOwner() ==  phaseSpace){
-            setPhase(param);
-        }else if(param.getOwner() ==  modulusSpace){
-            System.out.println("param modulus_coefs  "+param.getNumber());
-            setModulus(param);
-        }else{
-            throw new IllegalArgumentException("DoubleShapedVector param does not belong to any space");
-        }
-    }
-
+    /**
+     * Setter for the single precision flag
+     * @param single
+     */
     public void setSingle(boolean single){
         this.single = single;
     }
