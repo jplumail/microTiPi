@@ -1,6 +1,6 @@
 package microTiPi.microscopy;
 
-import mitiv.base.Traits;
+import microTiPi.epifluorescence.WideFieldModel;
 
 /*
  * This file is part of TiPi (a Toolkit for Inverse Problems and Imaging)
@@ -30,18 +30,18 @@ import mitiv.base.Traits;
 /**
  * A Typed object has a primitive type.
  *
- * @author Éric Thiébaut
+ * @author Ferréol
  */
 public interface MicroscopeType {
     /**
-     * Query the type of the elements stored by the typed object.
+     * Query the type of the microscope stored by the typed object.
      *
-     * @return One of: {@link Traits#BYTE}, {@link Traits#SHORT},
-     *         {@link Traits#INT}, {@link Traits#LONG}, {@link Traits#FLOAT},
-     *         {@link Traits#DOUBLE}, {@link Traits#BOOLEAN}, or
-     *         {@link Traits#VOID}.
+     * @return One of: {@link WideFieldModel}
      */
     public abstract int getMicroscopeType();
+    /**
+     *
+     */
     public abstract void computePSF();
 
 }

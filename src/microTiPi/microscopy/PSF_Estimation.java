@@ -25,7 +25,6 @@
 
 package microTiPi.microscopy;
 
-import mitiv.array.Array3D;
 import mitiv.array.ShapedArray;
 import mitiv.base.Shape;
 import mitiv.deconv.WeightedConvolutionCost;
@@ -34,7 +33,6 @@ import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.FloatShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.old.MathUtils;
 import mitiv.optim.BoundProjector;
 import mitiv.optim.LineSearch;
 import mitiv.optim.MoreThuenteLineSearch;
@@ -42,6 +40,15 @@ import mitiv.optim.OptimTask;
 import mitiv.optim.ReverseCommunicationOptimizer;
 import mitiv.optim.VMLMB;
 
+/**
+ * Define a class for PSF estimation. This class contains all the parameters
+ * needed to estimate the PSF defined in the pupil property.
+ * The fit is performed using the fitPSF function.
+ *
+ *
+ * @author Ferréol
+ *
+ */
 public class PSF_Estimation  {
 
     private double gatol = 0.0;
@@ -62,16 +69,14 @@ public class PSF_Estimation  {
     private  ShapedArray weights = null;
     private boolean single;
 
-    public static final int DEFOCUS = 0;
-    public static final int PHASE = 1;
-    public static final int MODULUS = 2;
-
     private boolean run = true;
 
-    public void enablePositivity(Boolean positivity) {
-        setLowerBound(positivity ? 0.0 : Double.NEGATIVE_INFINITY);
-    }
 
+
+    /**
+     * Build a PSF_Estimation object for the PSF defined in pupil
+     * @param pupil
+     */
     public PSF_Estimation(MicroscopeModel pupil) {
         if (pupil!=null){
             this.pupil = pupil;
@@ -80,11 +85,22 @@ public class PSF_Estimation  {
             fatal("pupil not specified");
         }
     }
+
+    /**
+     * @param positivity
+     */
+    public void enablePositivity(Boolean positivity) {
+        setLowerBound(positivity ? 0.0 : Double.NEGATIVE_INFINITY);
+    }
     private static void fatal(String reason) {
         throw new IllegalArgumentException(reason);
     }
 
 
+    /**
+     * Perform the PSF estimation on the parameters indexed by flag
+     * @param flag
+     */
     public void fitPSF(  int flag) {
         // FIXME set a best X
         DoubleShapedVector x = null;
@@ -96,10 +112,6 @@ public class PSF_Estimation  {
 
 
         x = pupil.parameterCoefs[flag];
-        // TODO add flag test
-        /* }else{
-            fatal("Wrong flag type");
-        }*/
 
 
 
@@ -150,7 +162,6 @@ public class PSF_Estimation  {
         // Initialize the non linear conjugate gradient
         LineSearch lineSearch = null;
         VMLMB vmlmb = null;
-        //BLMVM vmlmb = null;
         BoundProjector projector = null;
         int bounded = 0;
         limitedMemorySize = 0;
@@ -233,100 +244,144 @@ public class PSF_Estimation  {
 
         }
 
-       
-            pupil.setParam(best_x);
-        
+
+        pupil.setParam(best_x);
+
     }
 
     /* Below are all methods required for a ReconstructionJob. */
 
+    /** Enable debugging mode
+     * @param value
+     */
     public void setDebugMode(boolean value) {
         debug = value;
     }
+
+    /** Fix the maximum number of iteration
+     * @param value
+     */
     public void setMaximumIterations(int value) {
         maxiter = value;
         maxeval = 2* value; // 2 or 3 times more evaluations than iterations seems reasonable
     }
+
+    /** Set the number of steps kept in memory for hessian estimation.
+     * @param value
+     */
     public void setLimitedMemorySize(int value) {
         limitedMemorySize = value;
     }
+
+    /**
+     * @param value
+     */
     public void setAbsoluteTolerance(double value) {
         gatol = value;
     }
+
+    /**
+     * @param value
+     */
     public void setRelativeTolerance(double value) {
         grtol = value;
     }
-    //  @Override
-    public double getRelativeTolerance() {
-        return grtol;
-    }
-    //the same effect with preMade value is enablePositivity()
+
+    /**
+     * @param value
+     */
     public void setLowerBound(double value) {
         lowerBound = value;
     }
+
+    /**
+     * @param value
+     */
     public void setUpperBound(double value) {
         upperBound = value;
     }
+
+    /**
+     * Emergency stop
+     */
     public void stop(){
         run = false;
     }
+
+    /**
+     * Enable the fit
+     */
     public void start(){
         run = true;
     }
+
+    /** Set the weights (inverse covariance matrix)
+     * @param shapedArray
+     */
     public void setWeight(ShapedArray shapedArray){
         this.weights = shapedArray;
     }
+
+    /** Change the microscope model
+     * @param pupil
+     */
     public void setPupil(MicroscopeModel pupil) {
         this.pupil = pupil;
     }
+
+    /**
+     * @return the pupil
+     */
     public MicroscopeModel getPupil() {
         return pupil;
     }
+
+    /**
+     * @return the data
+     */
     public ShapedArray getData() {
         return data;
     }
 
+    /**
+     * @param shapedArray
+     */
     public void setData(ShapedArray shapedArray) {
         this.data = shapedArray;
     }
 
+    /**
+     * @return the PSF
+     */
     public ShapedArray getPsf() {
         return psf;
     }
-    public void setPsf(Array3D psf) {
-        this.psf = psf;
-    }
 
-
-    // @Override
+    /**
+     * @return the current number of iteration
+     */
     public int getIterations() {
         return (minimizer == null ? 0 : minimizer.getIterations());
     }
 
-    //   @Override
+    /**
+     * @return the current number of evaluation
+     */
     public int getEvaluations() {
         return (minimizer == null ? 0 : minimizer.getEvaluations());
     }
 
-    //  @Override
+
+    /**
+     * @return the value of the cost function
+     */
     public double getCost() {
         return fcost;
     }
 
-    //  @Override
-    public double getGradientNorm2() {
-        return (gcost == null ? 0.0 : gcost.norm2());
-    }
-
-    //   @Override
-    public double getGradientNorm1() {
-        return (gcost == null ? 0.0 : gcost.norm1());
-    }
-
-    //   @Override
-    public double getGradientNormInf() {
-        return (gcost == null ? 0.0 : gcost.normInf());
-    }
+    /**
+     * @param objArray
+     */
     public void setObj(ShapedArray objArray) {
         this.obj = objArray;
 

@@ -32,6 +32,12 @@ import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
 
+/**
+ * Abstract class for to model PSF of any fluorescence microscope
+ *
+ * @author Ferréol
+ *
+ */
 public abstract class MicroscopeModel
 {
     protected int PState=0;   // flag to prevent useless recomputation of the PSF
@@ -74,13 +80,37 @@ public abstract class MicroscopeModel
         this.single = single;
     }
 
+
     /**
-     *
+     * Launch internal routines to compute PSF
      */
     abstract public void computePSF();
+
+    /**
+     * @return the PSF
+     */
     abstract public Array3D getPSF();
+
+    /**
+     * Setter for PSF parameters. The parameter type is given by the parameter space of @param
+     * @param param PSF parameters
+     */
+    abstract public void setParam(DoubleShapedVector param);
+
+    /**
+     * Apply the Jacobian to the gradient on the PSF to get the
+     *  derivative with respect to the PSF parameters
+     *
+     * @param grad derivative with respect to the PSF pixels
+     * @param xspace PSF parameter space
+     * @return derivative with respect to the PSF parameters
+     */
     abstract public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace);
-    abstract   public  void setParam(DoubleShapedVector param);
+
+
+    /**
+     * Free some memory
+     */
     abstract public void freePSF();
 
     /**
