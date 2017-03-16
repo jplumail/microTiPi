@@ -62,9 +62,9 @@ public class PSF_Estimation  {
     private  ShapedArray weights = null;
     private boolean single;
 
-    public static final int DEFOCUS = 1;
-    public static final int ALPHA = 2;
-    public static final int BETA = 3;
+    public static final int DEFOCUS = 0;
+    public static final int PHASE = 1;
+    public static final int MODULUS = 2;
 
     private boolean run = true;
 
@@ -94,22 +94,12 @@ public class PSF_Estimation  {
             fatal("Input data not specified.");
         }
 
-        if(flag == DEFOCUS)
-        {
-            x = pupil.defocus_coefs;
-        }
-        else if (flag == ALPHA)
-        {
-            x = pupil.phase_coefs;
-        }
-        else if(flag == BETA)
-        {
-            x = pupil.modulus_coefs;
-            System.out.println("pupil.modulus_coefs: " + pupil.modulus_coefs.getNumber());
 
-        }else{
+        x = pupil.parameterCoefs[flag];
+        // TODO add flag test
+        /* }else{
             fatal("Wrong flag type");
-        }
+        }*/
 
 
 
@@ -243,33 +233,9 @@ public class PSF_Estimation  {
 
         }
 
-        if(flag == DEFOCUS)
-        {
-            if (debug) {
-                System.out.println("--------------");
-                System.out.println("defocus");
-                MathUtils.printArray(best_x.getData());
-            }
-            pupil.setDefocus(best_x);
-        }
-        else if (flag == ALPHA)
-        {
-            if (debug) {
-                System.out.println("--------------");
-                System.out.println("alpha");
-                MathUtils.printArray(best_x.getData());
-            }
-            pupil.setPhase(best_x);
-        }
-        else if(flag == BETA)
-        {
-            if (true) {
-                System.out.println("--------------");
-                System.out.println("beta");
-                MathUtils.printArray(best_x.getData());
-            }
-            pupil.setModulus(best_x );
-        }
+       
+            pupil.setParam(best_x);
+        
     }
 
     /* Below are all methods required for a ReconstructionJob. */

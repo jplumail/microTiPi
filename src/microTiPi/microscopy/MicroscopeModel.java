@@ -28,6 +28,7 @@ package microTiPi.microscopy;
 import mitiv.array.Array3D;
 import mitiv.base.Shape;
 import mitiv.linalg.shaped.DoubleShapedVector;
+import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
 
@@ -46,8 +47,8 @@ public abstract class MicroscopeModel
     protected Shape psfShape;
     protected Array3D psf; //3D point spread function
 
-
-
+    protected DoubleShapedVectorSpace[] parameterSpace;
+    protected DoubleShapedVector[] parameterCoefs;
 
 
     /** Initialize the  PSF model containing parameters
@@ -88,6 +89,15 @@ public abstract class MicroscopeModel
      */
     public void setSingle(boolean single){
         this.single = single;
+    }
+
+    /**
+     * @param best_x
+     * @param flag
+     */
+    public void set(DoubleShapedVector best_x, int flag) {
+        // TODO Auto-generated method stub
+
     }
 
 

@@ -77,17 +77,16 @@ public class WideFieldModel extends MicroscopeModel{
     protected Shape aShape;
     protected Shape psf2DShape;
 
-    protected DoubleShapedVectorSpace defocusSpace;
-    protected DoubleShapedVectorSpace phaseSpace;
-    protected DoubleShapedVectorSpace modulusSpace;
-    protected DoubleShapedVector modulus_coefs;  // array of Zernike coefficients that describe the modulus
-    protected DoubleShapedVector phase_coefs;  // array of Zernike coefficients that describe the phase
-    protected DoubleShapedVector defocus_coefs;  // array of Zernike coefficients that describe the phase
-
 
     protected int nModulus;
     protected int nDefocus;
     protected int nPhase;
+
+
+    public static final int DEFOCUS = 0;
+    public static final int PHASE = 1;
+    public static final int MODULUS = 2;
+
 
     private boolean para=true;
 
@@ -122,6 +121,9 @@ public class WideFieldModel extends MicroscopeModel{
         if(this.nModulus<1){
             this.nModulus = 1;
         }
+
+        parameterSpace = new DoubleShapedVectorSpace[3];
+        parameterCoefs = new DoubleShapedVector[3];
 
         this.nPhase= nPhase;
         setNModulus();
@@ -360,12 +362,12 @@ public class WideFieldModel extends MicroscopeModel{
 
     @Override
     public DoubleShapedVector apply_Jacobian(ShapedVector grad, ShapedVectorSpace xspace){
-        if(xspace ==  defocusSpace){
+        if(xspace ==  parameterSpace[DEFOCUS]){
             return apply_J_defocus( grad);
-        }else if(xspace ==  phaseSpace){
+        }else if(xspace ==  parameterSpace[PHASE]){
             return apply_J_phase( grad);
-        }else if(xspace ==  modulusSpace){
-            System.out.println("xspace modulus_coefs  "+xspace.getNumber());
+        }else if(xspace ==  parameterSpace[MODULUS]){
+            System.out.println("xspace parameterCoefs[MODULUS]  "+xspace.getNumber());
             return apply_J_modulus( grad);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");
@@ -374,12 +376,12 @@ public class WideFieldModel extends MicroscopeModel{
 
     @Override
     public  void setParam(DoubleShapedVector param) {
-        if(param.getOwner() ==  defocusSpace){
+        if(param.getOwner() ==  parameterSpace[DEFOCUS]){
             setDefocus(param);
-        }else if(param.getOwner() ==  phaseSpace){
+        }else if(param.getOwner() ==  parameterSpace[PHASE]){
             setPhase(param);
-        }else if(param.getOwner() ==  modulusSpace){
-            System.out.println("param modulus_coefs  "+param.getNumber());
+        }else if(param.getOwner() ==  parameterSpace[MODULUS]){
+            System.out.println("param parameterCoefs[MODULUS]  "+param.getNumber());
             setModulus(param);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector param does not belong to any space");
@@ -397,8 +399,8 @@ public class WideFieldModel extends MicroscopeModel{
         final int Npix = Nx*Ny;
         double defoc_scale = 0.;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
-        final double NBeta =1./modulus_coefs.norm2();
-        Double1D JRho =  Double1D.create(modulusSpace.getShape());
+        final double NBeta =1./parameterCoefs[MODULUS].norm2();
+        Double1D JRho =  Double1D.create(parameterSpace[MODULUS].getShape());
 
         JRho.fill(0.);
 
@@ -420,7 +422,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             float Aq[] = new float[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( modulusSpace.getNumber());
+                            ApplyJPhaOut pout = new ApplyJPhaOut( parameterSpace[MODULUS].getNumber());
 
                             if (iz1 > Nz/2)
                             {
@@ -454,10 +456,10 @@ public class WideFieldModel extends MicroscopeModel{
                                     {
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                                        for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                                         {
                                             int Ci= k*Npix + in;
-                                            pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta;
+                                            pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(parameterCoefs[MODULUS].get(k)*NBeta,2))*NBeta;
                                         }
                                     }
                                 }
@@ -476,7 +478,7 @@ public class WideFieldModel extends MicroscopeModel{
                     ApplyJPhaOut pout;
                     try {
                         pout = future.get();
-                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                        for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                         {
                             JRho.set(k,JRho.get(k)+ pout.grd[k]);
                         }
@@ -527,7 +529,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                 }
 
-                for (int k = 0; k < modulusSpace.getNumber(); k++)
+                for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                 {
                     double tmp = 0;
                     for (int in = 0; in < Npix; in++)
@@ -535,7 +537,7 @@ public class WideFieldModel extends MicroscopeModel{
                         Ci = k*Npix + in;
                         tmp += J[in]*Z[Ci];
                     }
-                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(parameterCoefs[MODULUS].get(k)*NBeta,2))*NBeta);
 
                 }
             }
@@ -601,10 +603,10 @@ public class WideFieldModel extends MicroscopeModel{
                                     {
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                                        for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                                         {
                                             int Ci= k*Npix + in;
-                                            pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta;
+                                            pout.grd[k] += 2*PSFNorm*jin*Z[Ci]*(1 - Math.pow(parameterCoefs[MODULUS].get(k)*NBeta,2))*NBeta;
 
                                         }
                                     }
@@ -626,7 +628,7 @@ public class WideFieldModel extends MicroscopeModel{
                     ApplyJPhaOut pout;
                     try {
                         pout = future.get();
-                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                        for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                         {
                             JRho.set(k,JRho.get(k)+ pout.grd[k]);
                         }
@@ -642,7 +644,7 @@ public class WideFieldModel extends MicroscopeModel{
                     double[] jt;
                     try {
                         jt = future.get();
-                        for (int k = 0; k < modulusSpace.getNumber(); k++)
+                        for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                         {
                             double tmp = 0;
                             for (int in = 0; in < Npix; in++)
@@ -650,7 +652,7 @@ public class WideFieldModel extends MicroscopeModel{
                                 Ci = k*Npix + in;
                                 tmp += jt[in]*Z[Ci];
                             }
-                            JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+                            JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(parameterCoefs[MODULUS].get(k)*NBeta,2))*NBeta);
                         }
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
@@ -701,7 +703,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
 
 
-                for (int k = 0; k < modulusSpace.getNumber(); k++)
+                for (int k = 0; k < parameterSpace[MODULUS].getNumber(); k++)
                 {
                     double tmp = 0;
                     for (int in = 0; in < Npix; in++)
@@ -709,12 +711,12 @@ public class WideFieldModel extends MicroscopeModel{
                         Ci = k*Npix + in;
                         tmp += J[in]*Z[Ci];
                     }
-                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(modulus_coefs.get(k)*NBeta,2))*NBeta);
+                    JRho.set(k,2*PSFNorm*tmp*(1 - Math.pow(parameterCoefs[MODULUS].get(k)*NBeta,2))*NBeta);
                 }
             }
         }
 
-        return modulusSpace.create(JRho);
+        return parameterSpace[MODULUS].create(JRho);
 
     }
 
@@ -729,7 +731,7 @@ public class WideFieldModel extends MicroscopeModel{
         int Ci;
         final int Npix = Nx*Ny;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
-        Double1D JPhi =  Double1D.create(phaseSpace.getShape());
+        Double1D JPhi =  Double1D.create(parameterSpace[PHASE].getShape());
         JPhi.fill(0.);
         if(single){
             if(para){
@@ -749,7 +751,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             float Aq[] = new float[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+                            ApplyJPhaOut pout = new ApplyJPhaOut( parameterSpace[PHASE].getNumber());
 
                             if (iz1 > Nz/2)
                             {
@@ -783,7 +785,7 @@ public class WideFieldModel extends MicroscopeModel{
                                     {
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                                        for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                                         {
                                             int Ci;
 
@@ -811,7 +813,7 @@ public class WideFieldModel extends MicroscopeModel{
                     ApplyJPhaOut pout;
                     try {
                         pout = future.get();
-                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                        for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                         {
                             JPhi.set(k,JPhi.get(k)+ pout.grd[k]);
                         }
@@ -861,7 +863,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
 
 
-                for (int k = 0; k < phaseSpace.getNumber(); k++)
+                for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                 {
                     double tmp = 0;
                     for (int in = 0; in < Npix; in++)
@@ -894,7 +896,7 @@ public class WideFieldModel extends MicroscopeModel{
 
                             double defoc_scale=0;
                             double Aq[] = new double[2*Npix];
-                            ApplyJPhaOut pout = new ApplyJPhaOut( phaseSpace.getNumber());
+                            ApplyJPhaOut pout = new ApplyJPhaOut( parameterSpace[PHASE].getNumber());
 
                             if (iz1 > Nz/2)
                             {
@@ -927,7 +929,7 @@ public class WideFieldModel extends MicroscopeModel{
                                     {
                                         double ph = phi[in] + defoc_scale*psi[in];
                                         double jin = rho[in]*(Aq[2*in]*Math.sin(ph) + Aq[2*in + 1]*Math.cos(ph));
-                                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                                        for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                                         {
                                             int Ci;
 
@@ -955,7 +957,7 @@ public class WideFieldModel extends MicroscopeModel{
                     ApplyJPhaOut pout;
                     try {
                         pout = future.get();
-                        for (int k = 0; k < phaseSpace.getNumber(); k++)
+                        for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                         {
                             JPhi.set(k,JPhi.get(k)+ pout.grd[k]);
                         }
@@ -1005,7 +1007,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
 
 
-                for (int k = 0; k < phaseSpace.getNumber(); k++)
+                for (int k = 0; k < parameterSpace[PHASE].getNumber(); k++)
                 {
                     double tmp = 0;
                     for (int in = 0; in < Npix; in++)
@@ -1021,7 +1023,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-        return phaseSpace.create(JPhi );
+        return parameterSpace[PHASE].create(JPhi );
     }
 
 
@@ -1041,7 +1043,7 @@ public class WideFieldModel extends MicroscopeModel{
         final double[] ry = new double[Ny];
         final int Npix =  Nx*Ny;
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
-        double[] grd = new double[defocusSpace.getNumber()];
+        double[] grd = new double[parameterSpace[DEFOCUS].getNumber()];
 
         for(int nx = 0; nx < Nx; nx++)
         {
@@ -1360,7 +1362,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-        switch(defocusSpace.getNumber())
+        switch(parameterSpace[DEFOCUS].getNumber())
         {
             case 3:
                 grd[2] = d2;
@@ -1375,7 +1377,7 @@ public class WideFieldModel extends MicroscopeModel{
         }
 
 
-        return  defocusSpace.create(Double1D.wrap(grd, defocusSpace.getShape()));
+        return  parameterSpace[DEFOCUS].create(Double1D.wrap(grd, parameterSpace[DEFOCUS].getShape()));
 
     }
 
@@ -1519,10 +1521,10 @@ public class WideFieldModel extends MicroscopeModel{
      * 1 :  defocus = {n_i / \lambda}
      */
     public void setDefocus(DoubleShapedVector defoc) {
-        if(defoc.belongsTo(defocusSpace)){
-            defocus_coefs = defoc;
+        if(defoc.belongsTo(parameterSpace[DEFOCUS])){
+            parameterCoefs[DEFOCUS] = defoc;
         }else{
-            throw new IllegalArgumentException("defocus  does not belong to the defocusSpace");
+            throw new IllegalArgumentException("defocus  does not belong to the parameterSpace[DEFOCUS]");
         }
         switch (defoc.getNumber())
         {
@@ -1545,11 +1547,11 @@ public class WideFieldModel extends MicroscopeModel{
     }
 
     public void setDefocus(double[] defoc) {
-        if (defocusSpace==null){
-            defocusSpace = new DoubleShapedVectorSpace(3);
+        if (parameterSpace[DEFOCUS]==null){
+            parameterSpace[DEFOCUS] = new DoubleShapedVectorSpace(3);
         }
-        defocus_coefs =   defocusSpace.wrap(defoc);
-        setDefocus(defocus_coefs);
+        parameterCoefs[DEFOCUS] =   parameterSpace[DEFOCUS].wrap(defoc);
+        setDefocus(parameterCoefs[DEFOCUS]);
     }
     public void setDefocus() {
         setDefocus(new double[] {ni/lambda, deltaX, deltaY});
@@ -1558,11 +1560,11 @@ public class WideFieldModel extends MicroscopeModel{
 
 
     public void setPupilAxis(double[] axis) {
-        if (defocusSpace==null){
-            defocusSpace = new DoubleShapedVectorSpace(3);
+        if (parameterSpace[DEFOCUS]==null){
+            parameterSpace[DEFOCUS] = new DoubleShapedVectorSpace(3);
         }
-        defocus_coefs =   defocusSpace.wrap(new double[] {ni/lambda, axis[0], axis[1]});
-        setDefocus(defocus_coefs);
+        parameterCoefs[DEFOCUS] =   parameterSpace[DEFOCUS].wrap(new double[] {ni/lambda, axis[0], axis[1]});
+        setDefocus(parameterCoefs[DEFOCUS]);
     }
 
     /**
@@ -1573,8 +1575,8 @@ public class WideFieldModel extends MicroscopeModel{
      * @param beta Zernike coefficients
      */
     public void setModulus(DoubleShapedVector beta) {
-        if(beta.belongsTo(modulusSpace)){
-            modulus_coefs = beta;
+        if(beta.belongsTo(parameterSpace[MODULUS])){
+            parameterCoefs[MODULUS] = beta;
         }else{
             throw new IllegalArgumentException("DoubleShapedVector beta does not belong to the modulus space");
         }
@@ -1598,13 +1600,13 @@ public class WideFieldModel extends MicroscopeModel{
 
     public void setModulus(double[] beta) {
         setNModulus(beta.length);
-        modulus_coefs = modulusSpace.wrap(beta);
-        setModulus(modulus_coefs);
+        parameterCoefs[MODULUS] = parameterSpace[MODULUS].wrap(beta);
+        setModulus(parameterCoefs[MODULUS]);
     }
 
     public void setPhase(DoubleShapedVector phase) {
-        if(phase.belongsTo(phaseSpace)){
-            phase_coefs = phase;
+        if(phase.belongsTo(parameterSpace[PHASE])){
+            parameterCoefs[PHASE] = phase;
         }else{
             throw new IllegalArgumentException("phase parameter does not belong to the right space  ");
         }
@@ -1638,8 +1640,8 @@ public class WideFieldModel extends MicroscopeModel{
         }
         else{
             setNPhase(alpha.length);
-            phase_coefs = phaseSpace.wrap(alpha);
-            setPhase(phase_coefs) ;
+            parameterCoefs[PHASE] = parameterSpace[PHASE].wrap(alpha);
+            setPhase(parameterCoefs[PHASE]) ;
         }
     }
 
@@ -1675,11 +1677,11 @@ public class WideFieldModel extends MicroscopeModel{
         ni = value;
         lambda_ni = ni/lambda;
 
-        if (defocusSpace==null){
-            defocusSpace = new DoubleShapedVectorSpace(3);
+        if (parameterSpace[DEFOCUS]==null){
+            parameterSpace[DEFOCUS] = new DoubleShapedVectorSpace(3);
         }
-        defocus_coefs =   defocusSpace.wrap(new double[] {ni/lambda, deltaX, deltaY});
-        setDefocus(defocus_coefs);
+        parameterCoefs[DEFOCUS] =   parameterSpace[DEFOCUS].wrap(new double[] {ni/lambda, deltaX, deltaY});
+        setDefocus(parameterCoefs[DEFOCUS]);
     }
 
 
@@ -1710,14 +1712,14 @@ public class WideFieldModel extends MicroscopeModel{
      * @return modulus coefficients
      */
     public DoubleShapedVector getBeta() {
-        return modulus_coefs;
+        return parameterCoefs[MODULUS];
     }
 
     /**
      * @return phase coefficients
      */
     public DoubleShapedVector getAlpha() {
-        return phase_coefs;
+        return parameterCoefs[PHASE];
     }
 
     /**
@@ -1847,34 +1849,34 @@ public class WideFieldModel extends MicroscopeModel{
 
     public void setNPhase() {
         if(nPhase>0){
-            phaseSpace = new DoubleShapedVectorSpace(nPhase);
+            parameterSpace[PHASE] = new DoubleShapedVectorSpace(nPhase);
             if(radial){
-                Nzern = Math.max(nPhase+1, modulusSpace.getNumber());
+                Nzern = Math.max(nPhase+1, parameterSpace[MODULUS].getNumber());
             }else{
-                Nzern = Math.max(nPhase+3, modulusSpace.getNumber());
+                Nzern = Math.max(nPhase+3, parameterSpace[MODULUS].getNumber());
             }
             computeZernike();
-            phase_coefs = phaseSpace.create(0.);
-            setPhase(phase_coefs);
+            parameterCoefs[PHASE] = parameterSpace[PHASE].create(0.);
+            setPhase(parameterCoefs[PHASE]);
         }else{
-            phaseSpace = null;
+            parameterSpace[PHASE] = null;
         }
     }
 
     public void setNPhase(int nPh ) {
         nPhase = nPh;
         if(nPhase>0){
-            phaseSpace = new DoubleShapedVectorSpace(nPhase);
+            parameterSpace[PHASE] = new DoubleShapedVectorSpace(nPhase);
             if(radial){
-                Nzern = Math.max(nPhase+1, modulusSpace.getNumber());
+                Nzern = Math.max(nPhase+1, parameterSpace[MODULUS].getNumber());
             }else{
-                Nzern = Math.max(nPhase+3, modulusSpace.getNumber());
+                Nzern = Math.max(nPhase+3, parameterSpace[MODULUS].getNumber());
             }
             computeZernike();
-            phase_coefs = phaseSpace.create(0.);
-            setPhase(phase_coefs);
+            parameterCoefs[PHASE] = parameterSpace[PHASE].create(0.);
+            setPhase(parameterCoefs[PHASE]);
         }else{
-            phaseSpace = null;
+            parameterSpace[PHASE] = null;
         }
     }
 
@@ -1886,23 +1888,23 @@ public class WideFieldModel extends MicroscopeModel{
             nModulus = 1;
         }
 
-        modulusSpace =  new DoubleShapedVectorSpace(nModulus);
+        parameterSpace[MODULUS] =  new DoubleShapedVectorSpace(nModulus);
 
-        if (phaseSpace==null){
+        if (parameterSpace[PHASE]==null){
             Nzern = nModulus;
         }else{
             if(radial){
-                Nzern = Math.max(phaseSpace.getNumber()+1, nModulus);
+                Nzern = Math.max(parameterSpace[PHASE].getNumber()+1, nModulus);
             }else{
-                Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
+                Nzern = Math.max(parameterSpace[PHASE].getNumber()+3, nModulus);
             }
         }
 
         computeZernike();
-        modulus_coefs = modulusSpace.create(0.);
-        modulus_coefs.set(0, 1.);
+        parameterCoefs[MODULUS] = parameterSpace[MODULUS].create(0.);
+        parameterCoefs[MODULUS].set(0, 1.);
 
-        setModulus(modulus_coefs);
+        setModulus(parameterCoefs[MODULUS]);
     }
 
     public void setNModulus() {
@@ -1910,23 +1912,23 @@ public class WideFieldModel extends MicroscopeModel{
             nModulus = 1;
         }
 
-        modulusSpace =  new DoubleShapedVectorSpace(nModulus);
+        parameterSpace[MODULUS] =  new DoubleShapedVectorSpace(nModulus);
 
-        if (phaseSpace==null){
+        if (parameterSpace[PHASE]==null){
             Nzern = nModulus;
         }else{
             if(radial){
-                Nzern = Math.max(phaseSpace.getNumber()+1, nModulus);
+                Nzern = Math.max(parameterSpace[PHASE].getNumber()+1, nModulus);
             }else{
-                Nzern = Math.max(phaseSpace.getNumber()+3, nModulus);
+                Nzern = Math.max(parameterSpace[PHASE].getNumber()+3, nModulus);
             }
         }
 
         computeZernike();
-        modulus_coefs = modulusSpace.create(0.);
-        modulus_coefs.set(0, 1.);
+        parameterCoefs[MODULUS] = parameterSpace[MODULUS].create(0.);
+        parameterCoefs[MODULUS].set(0, 1.);
 
-        setModulus(modulus_coefs);
+        setModulus(parameterCoefs[MODULUS]);
     }
 
 
@@ -1945,11 +1947,11 @@ public class WideFieldModel extends MicroscopeModel{
 
 
     public int getNModulus() {
-        return modulus_coefs.getNumber();
+        return parameterCoefs[MODULUS].getNumber();
     }
 
     public int getNPhase() {
-        return phase_coefs.getNumber();
+        return parameterCoefs[PHASE].getNumber();
     }
 
 
