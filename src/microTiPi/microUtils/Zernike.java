@@ -30,8 +30,7 @@ import mitiv.old.MathUtils;
  *
  * [1] Robert J. Noll. Zernike polynomials and atmospheric turbulence. Optical
  * Society of America, 1976.
- * @author Beaubras Ludovic
- * @version beta 5.32, février 2013
+ * @author Soulez Ferréol
  */
 public class Zernike
 {
