@@ -1620,6 +1620,7 @@ public class WideFieldModel extends MicroscopeModel{
     public void setPhase(double[] alpha) {
         if((alpha==null)||(alpha.length==0)){
             nPhase=0;
+            parameterCoefs[PHASE] = null;
         }
         else{
             setNPhase(alpha.length);
@@ -1849,6 +1850,7 @@ public class WideFieldModel extends MicroscopeModel{
             setPhase(parameterCoefs[PHASE]);
         }else{
             parameterSpace[PHASE] = null;
+            parameterCoefs[PHASE] = null;
         }
     }
 
@@ -1925,7 +1927,10 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the number of phase coefficients
      */
     public int getNPhase() {
-        return parameterCoefs[PHASE].getNumber();
+        if(parameterCoefs[PHASE]==null)
+            return 0;
+        else
+            return parameterCoefs[PHASE].getNumber();
     }
 
 
