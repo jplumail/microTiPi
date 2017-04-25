@@ -35,13 +35,13 @@ public class DEMICSHook implements TiPiHook{
     public void run(Object caller, int iter) {
         String titlet;
         if(title==null)
-            titlet = "Current mu="+((MicroDeconvolution) caller).solver.getRegularizationLevel() +"it:"+((MicroDeconvolution) caller).solver.getIterations();
+            titlet = "Current mu="+((DeconvolutionJob) caller).solver.getRegularizationLevel() +"it:"+((DeconvolutionJob) caller).solver.getIterations();
         else
             titlet = title;
-        curImager.show(ArrayUtils.crop(((MicroDeconvolution) caller).solver.getSolution(),outShape),titlet);
+        curImager.show(ArrayUtils.crop(((DeconvolutionJob) caller).solver.getSolution(),outShape),titlet);
 
         if (debug){
-            System.out.println("Cost "+((MicroDeconvolution) caller).solver.getCost() );
+            System.out.println("Cost "+((DeconvolutionJob) caller).solver.getCost() );
         }
     }
 

@@ -12,12 +12,26 @@ import mitiv.optim.OptimTask;
  * @author ferreol
  *
  */
-public class MicroDeconvolution {
+public class DeconvolutionJob {
     protected EdgePreservingDeconvolution solver;
     protected DEMICSHook iterHook,finalHook;
     protected boolean run=true;
 
-    public MicroDeconvolution(ShapedArray dataArray, ShapedArray psfArray, ShapedArray wgtArray,
+    /**
+     * @param dataArray
+     * @param psfArray
+     * @param wgtArray
+     * @param outputShape
+     * @param mu
+     * @param epsilon
+     * @param scale
+     * @param positivity
+     * @param single
+     * @param nbIterDeconv
+     * @param iterHook
+     * @param finalHook
+     */
+    public DeconvolutionJob(ShapedArray dataArray, ShapedArray psfArray, ShapedArray wgtArray,
             Shape outputShape, double mu, double epsilon, double[] scale, boolean positivity,
             boolean single, int nbIterDeconv, DEMICSHook iterHook, DEMICSHook finalHook){
 
@@ -45,6 +59,11 @@ public class MicroDeconvolution {
         this.finalHook = finalHook;
 
     }
+    /**
+     * Perform deconvolution using objArray as initial guess
+     * @param objArray
+     * @return deconvolved array
+     */
     public ShapedArray deconv(ShapedArray objArray){
 
         int iter=0;
@@ -77,6 +96,9 @@ public class MicroDeconvolution {
         return objArray;
 
     }
+    /**
+     * Emergency stop
+     */
     public void abort(){
         run = false;
     }
