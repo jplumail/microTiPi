@@ -121,14 +121,5 @@ public abstract class MicroscopeModel
         this.single = single;
     }
 
-    /**
-     * @param best_x
-     * @param flag
-     */
-    public void set(DoubleShapedVector best_x, int flag) {
-        // TODO Auto-generated method stub
-
-    }
-
 
 }

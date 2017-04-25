@@ -373,7 +373,6 @@ public class WideFieldModel extends MicroscopeModel{
         }else if(xspace ==  parameterSpace[PHASE]){
             return apply_J_phase( grad);
         }else if(xspace ==  parameterSpace[MODULUS]){
-            System.out.println("xspace parameterCoefs[MODULUS]  "+xspace.getNumber());
             return apply_J_modulus( grad);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector grad does not belong to any space");
@@ -387,7 +386,6 @@ public class WideFieldModel extends MicroscopeModel{
         }else if(param.getOwner() ==  parameterSpace[PHASE]){
             setPhase(param);
         }else if(param.getOwner() ==  parameterSpace[MODULUS]){
-            System.out.println("param parameterCoefs[MODULUS]  "+param.getNumber());
             setModulus(param);
         }else{
             throw new IllegalArgumentException("DoubleShapedVector param does not belong to any space");

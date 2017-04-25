@@ -56,7 +56,6 @@ public class PSF_Estimation  {
     private int limitedMemorySize = 5;
     private double lowerBound = Double.NEGATIVE_INFINITY;
     private double upperBound = Double.POSITIVE_INFINITY;
-    private boolean debug = false;
     private int maxiter = 20;
     private int maxeval = 20;
     private ShapedArray data = null;
@@ -70,6 +69,9 @@ public class PSF_Estimation  {
     private boolean single;
 
     private boolean run = true;
+
+
+    private boolean debug = true;
 
 
 
