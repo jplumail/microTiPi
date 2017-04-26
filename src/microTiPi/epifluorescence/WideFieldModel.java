@@ -174,7 +174,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
 
     @Override
-    public void computePSF(){
+    public void computePsf(){
         if (PState>0)
             return;
         if(single){
@@ -1373,7 +1373,7 @@ public class WideFieldModel extends MicroscopeModel{
             }
         }
         pupil_area = Math.sqrt(pupil_area);
-        freePSF();
+        freeMem();
     }
 
 
@@ -1501,7 +1501,7 @@ public class WideFieldModel extends MicroscopeModel{
                 throw new IllegalArgumentException("bad defocus  parameters");
         }
         computeDefocus();
-        freePSF();
+        freeMem();
     }
 
     /**
@@ -1569,7 +1569,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-        freePSF();
+        freeMem();
     }
 
     /**
@@ -1608,7 +1608,7 @@ public class WideFieldModel extends MicroscopeModel{
                 }
             }
         }
-        freePSF();
+        freeMem();
     }
 
 
@@ -1635,7 +1635,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getRho() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return rho;
     }
@@ -1675,7 +1675,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getPhi(){
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return phi;
     }
@@ -1685,7 +1685,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getPsi() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return psi;
     }
@@ -1712,7 +1712,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getDefocusMultiplyByLambda() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         double[] defocus = {lambda_ni*lambda, deltaX*lambda, deltaY*lambda};
         return defocus;
@@ -1723,7 +1723,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getDefocus() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         double[] defocus = {lambda_ni, deltaX, deltaY};
         return defocus;
@@ -1734,7 +1734,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public double[] getPupilShift() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         double[] shift = { deltaX, deltaY};
         return shift;
@@ -1746,7 +1746,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public boolean[] getMaskPupil() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return maskPupil;
     }
@@ -1758,10 +1758,10 @@ public class WideFieldModel extends MicroscopeModel{
      * @return the PSF
      */
     @Override
-    public  Array3D getPSF() {
+    public  Array3D getPsf() {
 
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return psf;
     }
@@ -1794,7 +1794,7 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public Array4D get_cpxPsf() {
         if (PState<1){
-            computePSF();
+            computePsf();
         }
         return cpxPsf;
     }
@@ -1906,7 +1906,7 @@ public class WideFieldModel extends MicroscopeModel{
      * Set the flag PState to 0
      */
     @Override
-    public void freePSF() {
+    public void freeMem() {
         PState =0;
         cpxPsf = null;
         psf = null;

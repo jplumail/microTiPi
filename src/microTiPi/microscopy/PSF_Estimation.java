@@ -60,7 +60,7 @@ public class PSF_Estimation  {
     private int maxeval = 20;
     private ShapedArray data = null;
     private ShapedArray obj = null;
-    private ShapedArray psf = null;
+    //   private ShapedArray psf = null;
     private double fcost = 0.0;
     private ShapedVector gcost = null;
     private MicroscopeModel pupil = null;
@@ -153,7 +153,7 @@ public class PSF_Estimation  {
         }
 
         gcost = objSpace.create();
-        fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPSF() ), gcost, true);
+        fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPsf() ), gcost, true);
         best_cost = fcost;
         best_x = x.clone();
 
@@ -200,10 +200,10 @@ public class PSF_Estimation  {
             if (task == OptimTask.COMPUTE_FG) {
                 pupil.setParam(x);
 
-                pupil.computePSF();
+                pupil.computePsf();
 
 
-                fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPSF()), gcost, true);
+                fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPsf()), gcost, true);
 
                 if(fcost<best_cost){
                     best_cost = fcost;
@@ -356,7 +356,7 @@ public class PSF_Estimation  {
      * @return the PSF
      */
     public ShapedArray getPsf() {
-        return psf;
+        return pupil.getPsf();
     }
 
     /**
@@ -387,5 +387,9 @@ public class PSF_Estimation  {
     public void setObj(ShapedArray objArray) {
         this.obj = objArray;
 
+    }
+
+    public void freeMem(){
+        pupil.freeMem();
     }
 }

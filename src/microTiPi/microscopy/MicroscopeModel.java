@@ -84,12 +84,12 @@ public abstract class MicroscopeModel
     /**
      * Launch internal routines to compute PSF
      */
-    abstract public void computePSF();
+    abstract public void computePsf();
 
     /**
      * @return the PSF
      */
-    abstract public Array3D getPSF();
+    abstract public Array3D getPsf();
 
     /**
      * Setter for PSF parameters. The parameter type is given by the parameter space of @param
@@ -111,7 +111,7 @@ public abstract class MicroscopeModel
     /**
      * Free some memory
      */
-    abstract public void freePSF();
+    abstract public void freeMem();
 
     /**
      * Setter for the single precision flag
