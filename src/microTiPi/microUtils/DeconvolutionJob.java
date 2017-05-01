@@ -102,4 +102,10 @@ public class DeconvolutionJob {
     public void abort(){
         run = false;
     }
+    /**
+     * @param psfArray
+     */
+    public void updatePsf(ShapedArray psfArray) {
+        solver.setPSF(psfArray);
+    }
 }

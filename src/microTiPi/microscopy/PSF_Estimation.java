@@ -71,7 +71,7 @@ public class PSF_Estimation  {
     private boolean run = true;
 
 
-    private boolean debug = true;
+    private boolean debug = false;
 
 
 
@@ -104,6 +104,7 @@ public class PSF_Estimation  {
      * @param flag
      */
     public void fitPSF(  int flag) {
+        run =true;
         // FIXME set a best X
         DoubleShapedVector x = null;
         double best_cost = Double.POSITIVE_INFINITY;
@@ -202,12 +203,13 @@ public class PSF_Estimation  {
 
                 pupil.computePsf();
 
-
                 fcost = fdata.computeCostAndGradient(1.0, objSpace.create(pupil.getPsf()), gcost, true);
 
                 if(fcost<best_cost){
                     best_cost = fcost;
                     best_x = x.clone();
+
+
                     if(debug){
                         System.out.println("Cost: " + best_cost);
                     }
@@ -239,7 +241,9 @@ public class PSF_Estimation  {
             }
 
             if (minimizer.getEvaluations() >= maxeval) {
-                System.out.format("Warning: too many evaluation (%d).\n", maxeval);
+                if( debug){
+                    System.out.format("Warning: too many evaluation (%d).\n", maxeval);
+                }
                 break;
             }
             task = minimizer.iterate(x, fcost, gX);
@@ -306,16 +310,11 @@ public class PSF_Estimation  {
     /**
      * Emergency stop
      */
-    public void stop(){
+    public void abort(){
         run = false;
     }
 
-    /**
-     * Enable the fit
-     */
-    public void start(){
-        run = true;
-    }
+
 
     /** Set the weights (inverse covariance matrix)
      * @param shapedArray
@@ -387,6 +386,10 @@ public class PSF_Estimation  {
     public void setObj(ShapedArray objArray) {
         this.obj = objArray;
 
+    }
+
+    public MicroscopeModel getModel(){
+        return this.pupil;
     }
 
     public void freeMem(){

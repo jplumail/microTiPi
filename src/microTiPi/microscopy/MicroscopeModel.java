@@ -56,7 +56,6 @@ public abstract class MicroscopeModel
     protected DoubleShapedVectorSpace[] parameterSpace;
     protected DoubleShapedVector[] parameterCoefs;
 
-
     /** Initialize the  PSF model containing parameters
      *  @param psfShape shape of the PSF array
      *  @param dxy lateral pixel size
@@ -112,6 +111,11 @@ public abstract class MicroscopeModel
      * Free some memory
      */
     abstract public void freeMem();
+
+    /**
+     * @return return an array with the flags of each parameters
+     */
+    abstract public int[] getParametersFlags();
 
     /**
      * Setter for the single precision flag

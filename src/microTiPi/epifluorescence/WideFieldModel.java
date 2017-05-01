@@ -93,6 +93,8 @@ public class WideFieldModel extends MicroscopeModel{
      */
     public static final int MODULUS = 2;
 
+    public static final int[] parametersFlag = {DEFOCUS,PHASE,MODULUS};
+
     private boolean para=true;
 
     /**
@@ -1929,6 +1931,15 @@ public class WideFieldModel extends MicroscopeModel{
             return 0;
         else
             return parameterCoefs[PHASE].getNumber();
+    }
+
+
+    /* (non-Javadoc)
+     * @see microTiPi.microscopy.MicroscopeModel#getParametersFlags()
+     */
+    @Override
+    public int[] getParametersFlags() {
+        return parametersFlag;
     }
 
 
