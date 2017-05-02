@@ -28,7 +28,7 @@ import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.old.MathUtils;
+import mitiv.utils.MathUtils;
 
 /**
  * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)

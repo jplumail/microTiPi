@@ -25,7 +25,7 @@
 
 package microTiPi.microUtils;
 
-import mitiv.old.MathUtils;
+import mitiv.utils.MathUtils;
 /** Compute Zernike polynomials
  *
  * [1] Robert J. Noll. Zernike polynomials and atmospheric turbulence. Optical
