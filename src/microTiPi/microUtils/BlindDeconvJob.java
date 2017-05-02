@@ -6,13 +6,14 @@ package microTiPi.microUtils;
 import microTiPi.microscopy.PSF_Estimation;
 import mitiv.array.ArrayUtils;
 import mitiv.array.ShapedArray;
+import tipi4icy.jobs.DeconvolutionJob;
 
 /**
  * @author ferreol
  *
  */
 public class BlindDeconvJob {
-
+ 
     private int totalNbOfBlindDecLoop;
     private ShapedArray psfArray;
     private boolean debug=false;
