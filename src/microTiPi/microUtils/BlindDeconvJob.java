@@ -37,7 +37,7 @@ public class BlindDeconvJob {
 
     }
 
-    public void blindDeconv(ShapedArray objArray){
+    public ShapedArray blindDeconv(ShapedArray objArray){
         run =true;
         for(int i = 0; i < totalNbOfBlindDecLoop; i++) {
             psfArray = ArrayUtils.roll(psfEstimation.getPupil().getPsf());
@@ -47,10 +47,9 @@ public class BlindDeconvJob {
 
 
             objArray = deconvolver.deconv(objArray);
-
             //Emergency stop
             if (!run) {
-                return;
+                return objArray;
             }
             psfEstimation.setObj(objArray);
 
@@ -65,11 +64,12 @@ public class BlindDeconvJob {
                 psfEstimation.fitPSF( parametersFlags[j]);
                 //Emergency stop
                 if (!run) {
-                    return;
+                    return objArray;
                 }
             }
         }
 
+        return objArray;
     }
 
     /**
