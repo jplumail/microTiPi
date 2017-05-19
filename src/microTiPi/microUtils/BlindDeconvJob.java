@@ -21,7 +21,7 @@ public class BlindDeconvJob {
     private PSF_Estimation psfEstimation;
     private DeconvolutionJob deconvolver;
     private int[] parametersFlags;
-    private boolean run =true;
+    private boolean run =false;
     private int[] maxIter;
 
     /**
@@ -68,8 +68,12 @@ public class BlindDeconvJob {
                 }
             }
         }
-
+        run = false;
         return objArray;
+    }
+
+    public boolean isRunning() {
+        return run;
     }
 
     /**
