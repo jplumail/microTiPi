@@ -10,6 +10,8 @@ import mitiv.array.ShapedArray;
 import mitiv.jobs.DeconvolutionJob;
 
 /**
+ * BlindDeconvJob is the solver for blind deconvolution
+ *
  * @author ferreol
  *
  */
@@ -26,6 +28,23 @@ public class BlindDeconvJob {
     private int[] maxIter;
 
     /**
+     * Build the solver for blind deconvolution
+     *
+     * @param totalNbOfBlindDecLoop
+     *        number of loop
+     * @param parametersFlags
+     *        array of flags indicating which parameters of the MicroscopeModel
+     *        will be estimated
+     * @param maxIter
+     *        number of iterations for each PSF sub-problems.
+     *        It is has the same size as parametersFlags
+     * @param psfEstimation
+     *        solver for the PSF sub-problem. It contains the MicroscopeModel object
+     *        that describes the PSF parameterization
+     * @param deconvolver
+     *         solver for the object sub-problem
+     * @param debug
+     *         debug flag
      *
      */
     public BlindDeconvJob(int totalNbOfBlindDecLoop,int[] parametersFlags,int[] maxIter, PSF_Estimation psfEstimation ,DeconvolutionJob deconvolver, boolean debug ) {
@@ -38,6 +57,13 @@ public class BlindDeconvJob {
 
     }
 
+    /**
+     * Launch the blind deconvolution algorithm
+     * @param objArray
+     *        initial guess of the object
+     * @return estimated object
+     *
+     */
     public ShapedArray blindDeconv(ShapedArray objArray){
         run =true;
         for(int i = 0; i < totalNbOfBlindDecLoop; i++) {
@@ -73,6 +99,10 @@ public class BlindDeconvJob {
         return objArray;
     }
 
+    /**
+     * Check whether the blind deconvolution is running
+     * @return run
+     */
     public boolean isRunning() {
         return run;
     }

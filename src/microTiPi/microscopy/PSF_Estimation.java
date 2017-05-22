@@ -388,10 +388,16 @@ public class PSF_Estimation  {
 
     }
 
+    /** Return the object containing the full description of the PSF
+     * @return pupil
+     */
     public MicroscopeModel getModel(){
         return this.pupil;
     }
 
+    /**
+     * Free some memory
+     */
     public void freeMem(){
         pupil.freeMem();
     }
