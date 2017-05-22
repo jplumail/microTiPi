@@ -3,6 +3,7 @@
  */
 package microTiPi.microUtils;
 
+import microTiPi.microscopy.MicroscopeModel;
 import microTiPi.microscopy.PSF_Estimation;
 import mitiv.array.ArrayUtils;
 import mitiv.array.ShapedArray;
@@ -84,6 +85,22 @@ public class BlindDeconvJob {
         run  = false;
         deconvolver.abort();
         psfEstimation.abort();
+    }
+
+    /**
+     * Return the current PSF
+     * @return psf
+     */
+    public ShapedArray getPsf() {
+        return psfArray;
+    }
+
+    /**
+     * Return the current pupil object
+     * @return pupil
+     */
+    public  MicroscopeModel getPupil() {
+        return psfEstimation.getPupil();
     }
 
 }
