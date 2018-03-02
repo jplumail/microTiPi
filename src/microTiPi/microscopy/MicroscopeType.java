@@ -1,12 +1,7 @@
-package microTiPi.microscopy;
-
-import microTiPi.epifluorescence.WideFieldModel;
-
 /*
- * This file is part of TiPi (a Toolkit for Inverse Problems and Imaging)
- * developed by the MitiV project.
+ * Copyright (c) 2017 Ferréol Soulez ferreol.soulez@univ-lyon1.fr
  *
- * Copyright (c) 2014 the MiTiV project, http://mitiv.univ-lyon1.fr/
+ * This file is part of microTiPi
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,6 +21,9 @@ import microTiPi.epifluorescence.WideFieldModel;
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+package microTiPi.microscopy;
+
+import microTiPi.epifluorescence.WideFieldModel;
 
 /**
  * A Typed object has a primitive type.
