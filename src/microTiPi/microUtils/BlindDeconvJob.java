@@ -109,7 +109,9 @@ public class BlindDeconvJob {
                 }
                 psfEstimation.setRelativeTolerance(0.);
                 psfEstimation.setMaximumIterations(maxIter[j]);
-                psfEstimation.fitPSF( parametersFlags[j]);
+                if(maxIter[j]>0){
+                    psfEstimation.fitPSF( parametersFlags[j]);
+                }
                 //Emergency stop
                 if (!run) {
                     return objArray;
