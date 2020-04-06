@@ -99,22 +99,24 @@ public class BlindDeconvJob {
             if (!run) {
                 return objArray;
             }
-            psfEstimation.setObj(objArray);
+            if (i<totalNbOfBlindDecLoop-1) {
+                psfEstimation.setObj(objArray);
 
-            for (int j = 0; j < parametersFlags.length; j++) {
-                if (debug ) {
-                    System.out.println("------------------");
-                    System.out.println("  "+ j+" estimation");
-                    System.out.println("------------------");
-                }
-                psfEstimation.setRelativeTolerance(0.);
-                psfEstimation.setMaximumIterations(maxIter[j]);
-                if(maxIter[j]>0){
-                    psfEstimation.fitPSF( parametersFlags[j]);
-                }
-                //Emergency stop
-                if (!run) {
-                    return objArray;
+                for (int j = 0; j < parametersFlags.length; j++) {
+                    if (debug ) {
+                        System.out.println("------------------");
+                        System.out.println("  "+ j+" estimation");
+                        System.out.println("------------------");
+                    }
+                    psfEstimation.setRelativeTolerance(0.);
+                    psfEstimation.setMaximumIterations(maxIter[j]);
+                    if(maxIter[j]>0){
+                        psfEstimation.fitPSF( parametersFlags[j]);
+                    }
+                    //Emergency stop
+                    if (!run) {
+                        return objArray;
+                    }
                 }
             }
         }
