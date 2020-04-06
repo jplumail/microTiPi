@@ -34,7 +34,11 @@ public class MicroscopeMetadata {
     /**
      * Lateral size of a pixel in nm
      */
-    public double dxy     = 64.5;
+    public double dx     = 64.5;
+    /**
+     * Lateral size of a pixel in nm
+     */
+    public double dy     = 64.5;
     /**
      * axial sampling step size
      */
@@ -42,7 +46,15 @@ public class MicroscopeMetadata {
     /**
      * number of pixels along x or y
      */
-    public int    nxy     = 256;
+    //   public int    nxy     = 256;
+    /**
+     * number of pixels along x
+     */
+    public int    nx     = 256;
+    /**
+     * number of pixels along  y
+     */
+    public int    ny     = 256;
     /**
      * number of planes
      */
@@ -62,6 +74,6 @@ public class MicroscopeMetadata {
 
     @Override
     public String toString(){
-        return new String("dxy: "+dxy+" dz: "+dz+" nxy: "+nxy+" nz: "+nz+" na "+na+" lambda "+lambda+" ni "+ni);
+        return new String("dx: "+dx+"dy: "+dy+" dz: "+dz+" nx: "+nx+" ny: "+ny+" nz: "+nz+" na "+na+" lambda "+lambda+" ni "+ni);
     }
 }
