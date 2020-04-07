@@ -26,7 +26,7 @@ package microTiPi.microscopy;
 
 import mitiv.array.ShapedArray;
 import mitiv.base.Shape;
-import mitiv.deconv.WeightedConvolutionCost;
+import mitiv.conv.WeightedConvolutionCost;
 import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.FloatShapedVectorSpace;
