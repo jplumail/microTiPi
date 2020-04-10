@@ -28,7 +28,7 @@ import microTiPi.microscopy.MicroscopeModel;
 import microTiPi.microscopy.PSF_Estimation;
 import mitiv.array.ArrayUtils;
 import mitiv.array.ShapedArray;
-import mitiv.jobs.EdgePreservingDeconvolutionJob;
+import mitiv.jobs.DeconvolutionJob;
 
 /**
  * BlindDeconvJob is the solver for blind deconvolution
@@ -43,7 +43,7 @@ public class BlindDeconvJob {
     private boolean debug=false;
     //   private ShapedArray objArray;
     private PSF_Estimation psfEstimation;
-    private EdgePreservingDeconvolutionJob deconvolver;
+    private DeconvolutionJob deconvolver;
     private int[] parametersFlags;
     private boolean run =false;
     private int[] maxIter;
@@ -68,7 +68,7 @@ public class BlindDeconvJob {
      *         debug flag
      *
      */
-    public BlindDeconvJob(int totalNbOfBlindDecLoop,int[] parametersFlags,int[] maxIter, PSF_Estimation psfEstimation ,EdgePreservingDeconvolutionJob deconvolver, boolean debug ) {
+    public BlindDeconvJob(int totalNbOfBlindDecLoop,int[] parametersFlags,int[] maxIter, PSF_Estimation psfEstimation ,DeconvolutionJob deconvolver, boolean debug ) {
         this.totalNbOfBlindDecLoop = totalNbOfBlindDecLoop;
         this.parametersFlags = parametersFlags;
         this.maxIter = maxIter;
