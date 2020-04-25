@@ -29,6 +29,7 @@ import microTiPi.microscopy.PSF_Estimation;
 import mitiv.array.ArrayUtils;
 import mitiv.array.ShapedArray;
 import mitiv.jobs.DeconvolutionJob;
+import mitiv.utils.WeightUpdater;
 
 /**
  * BlindDeconvJob is the solver for blind deconvolution
@@ -44,9 +45,17 @@ public class BlindDeconvJob {
     //   private ShapedArray objArray;
     private PSF_Estimation psfEstimation;
     private DeconvolutionJob deconvolver;
+    /**
+     * @return the deconvolver
+     */
+    public DeconvolutionJob getDeconvolver() {
+        return deconvolver;
+    }
+
     private int[] parametersFlags;
     private boolean run =false;
     private int[] maxIter;
+    private WeightUpdater wghtUpdt;
 
     /**
      * Build the solver for blind deconvolution
@@ -68,14 +77,14 @@ public class BlindDeconvJob {
      *         debug flag
      *
      */
-    public BlindDeconvJob(int totalNbOfBlindDecLoop,int[] parametersFlags,int[] maxIter, PSF_Estimation psfEstimation ,DeconvolutionJob deconvolver, boolean debug ) {
+    public BlindDeconvJob(int totalNbOfBlindDecLoop,int[] parametersFlags,int[] maxIter, PSF_Estimation psfEstimation ,DeconvolutionJob deconvolver,WeightUpdater wghtUpdt, boolean debug ) {
         this.totalNbOfBlindDecLoop = totalNbOfBlindDecLoop;
         this.parametersFlags = parametersFlags;
         this.maxIter = maxIter;
         this.psfEstimation = psfEstimation;
         this.deconvolver = deconvolver;
         this.debug = debug;
-
+        this.wghtUpdt =wghtUpdt;
     }
 
     /**
@@ -93,8 +102,10 @@ public class BlindDeconvJob {
 
             deconvolver.updatePsf(psfArray);
 
-
             objArray = deconvolver.deconv(objArray);
+            if(wghtUpdt!=null) {
+                wghtUpdt.update(deconvolver);
+            }
             //Emergency stop
             if (!run) {
                 return objArray;
@@ -158,4 +169,8 @@ public class BlindDeconvJob {
         return psfEstimation.getPupil();
     }
 
+    public ShapedArray getModel() {
+        return deconvolver.getModel();
+    }
 }
+

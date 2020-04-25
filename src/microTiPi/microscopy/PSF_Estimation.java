@@ -146,7 +146,7 @@ public class PSF_Estimation  {
         WeightedConvolutionCost fdata = WeightedConvolutionCost.build(objSpace, dataSpace);
         fdata.setPSF(obj,off);
         fdata.setData(data);
-        fdata.setWeights(weights);
+        fdata.setWeights(weights,true);
 
         if (debug) {
             System.out.println("Vector space initialization complete.");
