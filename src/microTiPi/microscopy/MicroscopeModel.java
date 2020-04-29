@@ -30,14 +30,14 @@ import mitiv.linalg.shaped.DoubleShapedVector;
 import mitiv.linalg.shaped.DoubleShapedVectorSpace;
 import mitiv.linalg.shaped.ShapedVector;
 import mitiv.linalg.shaped.ShapedVectorSpace;
-
+import mitiv.psf.PsfModel;
 /**
  * Abstract class for to model PSF of any fluorescence microscope
  *
  * @author Ferréol
  *
  */
-public abstract class MicroscopeModel
+public abstract class MicroscopeModel extends PsfModel
 {
     protected int PState=0;   // flag to prevent useless recomputation of the PSF
     protected final static boolean NORMALIZED = true;
@@ -79,21 +79,6 @@ public abstract class MicroscopeModel
     }
 
 
-    /**
-     * Launch internal routines to compute PSF
-     */
-    abstract public void computePsf();
-
-    /**
-     * @return the PSF
-     */
-    abstract public Array3D getPsf();
-
-    /**
-     * Setter for PSF parameters. The parameter type is given by the parameter space of @param
-     * @param param PSF parameters
-     */
-    abstract public void setParam(DoubleShapedVector param);
 
     /**
      * Apply the Jacobian to the gradient on the PSF to get the
@@ -107,22 +92,10 @@ public abstract class MicroscopeModel
 
 
     /**
-     * Free some memory
-     */
-    abstract public void freeMem();
-
-    /**
      * @return return an array with the flags of each parameters
      */
     abstract public int[] getParametersFlags();
 
-    /**
-     * Setter for the single precision flag
-     * @param single
-     */
-    public void setSingle(boolean single){
-        this.single = single;
-    }
 
 
 }

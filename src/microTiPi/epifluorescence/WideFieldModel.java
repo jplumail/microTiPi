@@ -34,12 +34,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.jtransforms.fft.DoubleFFT_2D;
+import org.jtransforms.fft.DoubleFFT_3D;
 import org.jtransforms.fft.FloatFFT_2D;
+import org.jtransforms.fft.FloatFFT_3D;
 
 import microTiPi.microUtils.Zernike;
 import microTiPi.microscopy.MicroscopeModel;
 import mitiv.array.Array3D;
 import mitiv.array.Array4D;
+import mitiv.array.ArrayFactory;
 import mitiv.array.Double1D;
 import mitiv.array.Double2D;
 import mitiv.array.Double3D;
@@ -213,7 +216,7 @@ public class WideFieldModel extends MicroscopeModel{
             int threads = Runtime.getRuntime().availableProcessors();
             ExecutorService service = Executors.newFixedThreadPool(threads);
 
-            List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
+            List<Future<GetPsfParaOut>> futures = new ArrayList<>();
             for ( int iz = 0; iz < Nz; iz++)
             {
                 final int iz1 = iz;
@@ -284,7 +287,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<GetPsfParaOut>> futures = new ArrayList<Future<GetPsfParaOut>>();
+                List<Future<GetPsfParaOut>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final int iz1 = iz;
@@ -439,7 +442,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
@@ -564,7 +567,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
+                List<Future<double[]>> futures = new ArrayList<>();
 
                 for ( int iz = 0; iz < Nz; iz++)
                 {
@@ -744,7 +747,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
@@ -881,7 +884,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJPhaOut>> futures = new ArrayList<Future<ApplyJPhaOut>>();
+                List<Future<ApplyJPhaOut>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
@@ -1061,7 +1064,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<ApplyJDefOut>> futures = new ArrayList<Future<ApplyJDefOut>>();
+                List<Future<ApplyJDefOut>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final Float2D qz = ((Float3D) q.asShapedArray()).slice(iz);
@@ -1199,7 +1202,7 @@ public class WideFieldModel extends MicroscopeModel{
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
 
-                List<Future<double[]>> futures = new ArrayList<Future<double[]>>();
+                List<Future<double[]>> futures = new ArrayList<>();
                 for ( int iz = 0; iz < Nz; iz++)
                 {
                     final Double2D qz = ((Double3D) q.asShapedArray()).slice(iz);
@@ -1792,6 +1795,30 @@ public class WideFieldModel extends MicroscopeModel{
         return psf;
     }
 
+    @Override
+    public Array4D getMtf() {
+        if (PState<1){
+            computePsf();
+        }
+        if (single) {
+            FloatFFT_3D FFT3D = new FloatFFT_3D(Nx, Ny,Nz);
+            float[] mtf = new float[2*Nx*Ny*Nz];
+            for (int i = 0; i <Nx*Ny*Nz; i=i++) {
+                mtf[2*i] = psf.toFloat().flatten()[i];
+            }
+            FFT3D.complexForward(mtf);
+            return ArrayFactory.wrap(mtf, 2, Nx, Ny, Nz);
+        }else {
+            DoubleFFT_3D FFT3D = new DoubleFFT_3D(Nx, Ny,Nz);
+            double[] mtf = new double[2*Nx*Ny*Nz];
+            for (int i = 0; i <Nx*Ny*Nz; i=i++) {
+                mtf[2*i] = psf.toDouble().flatten()[i];
+            }
+            FFT3D.complexForward(mtf);
+            return ArrayFactory.wrap(mtf, 2, Nx, Ny, Nz);
+        }
+    }
+
 
     /**
      * @return the Zernike basis
@@ -1965,6 +1992,7 @@ public class WideFieldModel extends MicroscopeModel{
     public int[] getParametersFlags() {
         return parametersFlag;
     }
+
 
 
 }
