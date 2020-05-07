@@ -47,9 +47,7 @@ public abstract class MicroscopeModel extends PsfModel
     protected int Nx; // number of samples along lateral X-dimension
     protected int Ny; // number of samples along lateral Y-dimension
     protected int Nz; // number of samples along axial Z-dimension
-    protected boolean single = false;
 
-    protected Shape psfShape;
     protected Array3D psf; //3D point spread function
 
     protected DoubleShapedVectorSpace[] parameterSpace;
@@ -65,11 +63,12 @@ public abstract class MicroscopeModel extends PsfModel
             double dxy, double dz,
             boolean single)
     {
+        super(psfShape, single);
         this.dxy = dxy;
         this.dz = dz;
 
         if (psfShape.rank() !=3){
-            throw new IllegalArgumentException("PSF rank should be 3");
+            throw new IllegalArgumentException("Microscope PSF  should be 3D");
         }
         Nx = psfShape.dimension(0);
         Ny = psfShape.dimension(1);

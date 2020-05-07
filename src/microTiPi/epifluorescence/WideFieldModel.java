@@ -202,7 +202,6 @@ public class WideFieldModel extends MicroscopeModel{
      * h_k(z) = |a_k(z)|² = |Σ_j F_{j,k} A_j(z)|²
      */
 
-    @Override
     public void computePsf(){
         if (PState>0)
             return;
