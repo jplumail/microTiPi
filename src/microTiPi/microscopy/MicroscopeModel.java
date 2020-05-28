@@ -74,7 +74,7 @@ public abstract class MicroscopeModel extends PsfModel
         Ny = psfShape.dimension(1);
         Nz = psfShape.dimension(2);
         this.psfShape = psfShape;
-        this.single = single;
+        this.setSingle(single);
     }
 
 
@@ -94,6 +94,13 @@ public abstract class MicroscopeModel extends PsfModel
      * @return return an array with the flags of each parameters
      */
     abstract public int[] getParametersFlags();
+
+
+
+    /**
+     *
+     */
+    protected abstract void computePsf();
 
 
 

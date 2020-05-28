@@ -81,7 +81,7 @@ public class PSF_Estimation  {
     public PSF_Estimation(MicroscopeModel pupil) {
         if (pupil!=null){
             this.pupil = pupil;
-            single = pupil.single;
+            single = pupil.isSingle();
         }else{
             fatal("pupil not specified");
         }

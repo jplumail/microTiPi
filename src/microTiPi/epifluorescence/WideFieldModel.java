@@ -202,10 +202,11 @@ public class WideFieldModel extends MicroscopeModel{
      * h_k(z) = |a_k(z)|² = |Σ_j F_{j,k} A_j(z)|²
      */
 
+    @Override
     public void computePsf(){
         if (PState>0)
             return;
-        if(single){
+        if(isSingle()){
             cpxPsf = Float4D.create(  cpxPsfShape);
             psf = Float3D.create( psfShape);
 
@@ -222,7 +223,7 @@ public class WideFieldModel extends MicroscopeModel{
                 Callable<GetPsfParaOut> callable = new Callable<GetPsfParaOut>() {
                     @Override
                     public GetPsfParaOut call() throws Exception {
-                        GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,single);
+                        GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,isSingle());
 
                         double defoc_scale;
                         double phasePupil;
@@ -293,7 +294,7 @@ public class WideFieldModel extends MicroscopeModel{
                     Callable<GetPsfParaOut> callable = new Callable<GetPsfParaOut>() {
                         @Override
                         public GetPsfParaOut call() throws Exception {
-                            GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,single);
+                            GetPsfParaOut output = new GetPsfParaOut(Npix,iz1,isSingle());
                             double defoc_scale;
                             double phasePupil;
                             double[] A = new double[2*Npix];
@@ -436,7 +437,7 @@ public class WideFieldModel extends MicroscopeModel{
 
         JRho.fill(0.);
 
-        if(single){
+        if(isSingle()){
             if(para){
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
@@ -741,7 +742,7 @@ public class WideFieldModel extends MicroscopeModel{
         final double PSFNorm = 1.0/(Nx*Ny*Nz);
         Double1D JPhi =  Double1D.create(parameterSpace[PHASE].getShape());
         JPhi.fill(0.);
-        if(single){
+        if(isSingle()){
             if(para){
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
@@ -1058,7 +1059,7 @@ public class WideFieldModel extends MicroscopeModel{
                 ry[ny]  = ny*scale_y - deltaY;
             }
         }
-        if(single){
+        if(isSingle()){
             if(para){
                 int threads = Runtime.getRuntime().availableProcessors();
                 ExecutorService service = Executors.newFixedThreadPool(threads);
@@ -1548,12 +1549,20 @@ public class WideFieldModel extends MicroscopeModel{
     }
 
 
+    @Override
+    public void setParam(double[] param) {
+        // TODO: to be completed
+        setDefocus(param);
+    }
+
+
     /**
      * Update the defocus  function according inner parameters
      */
     protected void setDefocus() {
         setDefocus(new double[] {ni/lambda, deltaX, deltaY});
     }
+
 
 
 
@@ -1799,7 +1808,7 @@ public class WideFieldModel extends MicroscopeModel{
         if (PState<1){
             computePsf();
         }
-        if (single) {
+        if (isSingle()) {
             FloatFFT_3D FFT3D = new FloatFFT_3D(Nx, Ny,Nz);
             float[] mtf = new float[2*Nx*Ny*Nz];
             for (int i = 0; i <Nx*Ny*Nz; i=i++) {
@@ -1991,7 +2000,6 @@ public class WideFieldModel extends MicroscopeModel{
     public int[] getParametersFlags() {
         return parametersFlag;
     }
-
 
 
 }
