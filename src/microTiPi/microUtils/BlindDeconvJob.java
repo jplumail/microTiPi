@@ -169,6 +169,10 @@ public class BlindDeconvJob {
         return psfEstimation.getPupil();
     }
 
+    /**
+     * Return the convolved object (model)
+     * @return model
+     */
     public ShapedArray getModel() {
         return deconvolver.getModel();
     }

@@ -65,7 +65,7 @@ public class Zernike
      *  k = mod number of the Zernike polynomials (Noll indexing)
      *  @param n
      *  @param m
-     * @return
+     *  @return R_mn radial coef
      */
     public static   double[] coeffRadialZCumSumLog(int n, int m)
     {

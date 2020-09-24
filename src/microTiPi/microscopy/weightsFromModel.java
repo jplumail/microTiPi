@@ -29,8 +29,6 @@ public class weightsFromModel implements WeightUpdater {
 
     @Override
     public void update(Object caller) {
-        String tmp = caller.getClass().getSimpleName();
-        //        if( caller.getClass().getSimpleName() =="BlindDeconvJob") {
         if( caller  instanceof BlindDeconvJob) {
             ShapedArray modelArray = ((BlindDeconvJob) caller).getDeconvolver().getModel();
             HistoMap hm = new HistoMap(modelArray, dataArray, badpixArray);
