@@ -107,7 +107,7 @@ public class BlindDeconvJob {
             }
             objArray = deconvolver.deconv(objArray);
             if(wghtUpdt!=null) {
-                wghtUpdt.update(deconvolver);
+                psfEstimation.setWeight(wghtUpdt.update(deconvolver));
             }
             //Emergency stop
             if (!run) {
@@ -115,9 +115,6 @@ public class BlindDeconvJob {
             }
             if (i<totalNbOfBlindDecLoop-1) {
                 psfEstimation.setObj(objArray);
-                if(wghtUpdt!=null) {
-                    psfEstimation.setWeight(deconvolver.getWeights());
-                }
                 for (int j = 0; j < parametersFlags.length; j++) {
                     if (debug ) {
                         System.out.println("------------------");

@@ -28,7 +28,7 @@ public class weightsFromModel implements WeightUpdater {
     }
 
     @Override
-    public void update(Object caller) {
+    public ShapedArray update(Object caller) {
         if( caller  instanceof BlindDeconvJob) {
             ShapedArray modelArray = ((BlindDeconvJob) caller).getDeconvolver().getModel();
             HistoMap hm = new HistoMap(modelArray, dataArray, badpixArray);
@@ -37,6 +37,7 @@ public class weightsFromModel implements WeightUpdater {
             beta  = hm.getBeta();
             wghtArray= hm.computeWeightMap(modelArray);
             ((BlindDeconvJob) caller).getDeconvolver().updateWeight( wghtArray);
+            return wghtArray;
         }else if(  caller  instanceof DeconvolutionJob) {
             ShapedArray modelArray =  ((DeconvolutionJob) caller).getModel();
             HistoMap hm = new HistoMap(modelArray, dataArray, badpixArray);
@@ -45,9 +46,11 @@ public class weightsFromModel implements WeightUpdater {
             beta  = hm.getBeta();
             WeightFactory.normalize( wghtArray);
             ((DeconvolutionJob) caller).updateWeight(wghtArray);
+            return wghtArray;
         }else {
 
         }
+
     }
 
     @Override
