@@ -102,9 +102,9 @@ public class BlindDeconvJob {
 
             deconvolver.updatePsf(psfArray);
 
-            if(wghtUpdt!=null) {
+          /*  if(wghtUpdt!=null) {
                 wghtUpdt.update(deconvolver);
-            }
+            }*/
             objArray = deconvolver.deconv(objArray);
             if(wghtUpdt!=null) {
                 psfEstimation.setWeight(wghtUpdt.update(deconvolver));
