@@ -320,7 +320,7 @@ public class PSF_Estimation  {
      * @param shapedArray
      */
     public void setWeight(ShapedArray wgtArray){
-        this.weights = ArrayUtils.pad(wgtArray,data.getShape());
+        this.weights = ArrayUtils.pad(wgtArray,pupil.getShape());
     }
 
     /** Change the microscope model
