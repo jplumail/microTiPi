@@ -38,6 +38,7 @@ import mitiv.optim.MoreThuenteLineSearch;
 import mitiv.optim.OptimTask;
 import mitiv.optim.ReverseCommunicationOptimizer;
 import mitiv.optim.VMLMB;
+import mitiv.array.ArrayUtils;
 
 /**
  * Define a class for PSF estimation. This class contains all the parameters
@@ -318,8 +319,8 @@ public class PSF_Estimation  {
     /** Set the weights (inverse covariance matrix)
      * @param shapedArray
      */
-    public void setWeight(ShapedArray shapedArray){
-        this.weights = shapedArray;
+    public void setWeight(ShapedArray wgtArray){
+        this.weights = ArrayUtils.pad(wgtArray,data.getShape());
     }
 
     /** Change the microscope model
