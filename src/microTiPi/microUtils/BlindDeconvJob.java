@@ -55,7 +55,7 @@ public class BlindDeconvJob {
     private int[] parametersFlags;
     private boolean run =false;
     private int[] maxIter;
-    private WeightUpdater wghtUpdt;
+    private WeightUpdater wghtUpdt=null;
 
     /**
      * Build the solver for blind deconvolution
@@ -102,6 +102,9 @@ public class BlindDeconvJob {
 
             deconvolver.updatePsf(psfArray);
 
+            if(wghtUpdt!=null) {
+                wghtUpdt.update(deconvolver);
+            }
             objArray = deconvolver.deconv(objArray);
             if(wghtUpdt!=null) {
                 wghtUpdt.update(deconvolver);
@@ -112,7 +115,9 @@ public class BlindDeconvJob {
             }
             if (i<totalNbOfBlindDecLoop-1) {
                 psfEstimation.setObj(objArray);
-
+                if(wghtUpdt!=null) {
+                    psfEstimation.setWeight(deconvolver.getWeights());
+                }
                 for (int j = 0; j < parametersFlags.length; j++) {
                     if (debug ) {
                         System.out.println("------------------");
@@ -177,4 +182,3 @@ public class BlindDeconvJob {
         return deconvolver.getModel();
     }
 }
-
