@@ -29,7 +29,7 @@ import microTiPi.microscopy.PSF_Estimation;
 import mitiv.array.ArrayUtils;
 import mitiv.array.ShapedArray;
 import mitiv.jobs.DeconvolutionJob;
-import mitiv.utils.WeightUpdater;
+import mitiv.weights.WeightUpdater;
 
 /**
  * BlindDeconvJob is the solver for blind deconvolution
