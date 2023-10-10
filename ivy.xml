@@ -1,0 +1,8 @@
+<ivy-module version="2.0">
+    <info module="microTiPi"/>
+    <dependencies>
+        <dependency org="args4j" name="args4j" rev="2.33"/>
+        <dependency org="commons-lang" name="commons-lang" rev="2.0"/>
+        <dependency org="commons-cli" name="commons-cli" rev="1.0"/>
+    </dependencies>
+</ivy-module>
