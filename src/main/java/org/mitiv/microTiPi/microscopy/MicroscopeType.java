@@ -21,9 +21,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-package microTiPi.microscopy;
+package org.mitiv.microTiPi.microscopy;
 
-import microTiPi.epifluorescence.WideFieldModel;
+import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 
 /**
  * A Typed object has a primitive type.

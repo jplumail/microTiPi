@@ -5,16 +5,73 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.mitiv</groupId>
-    <artifactId>microtipi</artifactId>
+    <artifactId>microTiPi</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>formats-gpl</artifactId>
-        <version>7.0.0</version>
+            <groupId>ome</groupId>
+            <artifactId>formats-gpl</artifactId>
+            <version>7.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mitiv</groupId>
+            <artifactId>TiPi</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>args4j</groupId>
+            <artifactId>args4j</artifactId>
+            <version>2.33</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <defaultGoal>install</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>commands.MainCommand</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>commands.MainCommand</mainClass>
+                    <arguments>
+                        <argument>blinddeconv</argument>
+                        <argument>FOV_1_MMStack_Pos0_cropped.ome.tiff</argument>
+                        <argument>out.ome.tiff</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <repositories>
         <repository>

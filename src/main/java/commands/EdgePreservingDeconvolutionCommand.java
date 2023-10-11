@@ -35,14 +35,14 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import mitiv.array.ArrayUtils;
-import mitiv.array.ShapedArray;
-import mitiv.base.Shape;
-import mitiv.invpb.EdgePreservingDeconvolution;
-import mitiv.io.ColorModel;
-import mitiv.io.DataFormat;
-import mitiv.optim.OptimTask;
-import mitiv.utils.FFTUtils;
+import org.mitiv.TiPi.array.ArrayUtils;
+import org.mitiv.TiPi.array.ShapedArray;
+import org.mitiv.TiPi.base.Shape;
+import org.mitiv.TiPi.invpb.EdgePreservingDeconvolution;
+import org.mitiv.TiPi.io.ColorModel;
+import org.mitiv.TiPi.io.DataFormat;
+import org.mitiv.TiPi.optim.OptimTask;
+import org.mitiv.TiPi.utils.FFTUtils;
 
 
 public class EdgePreservingDeconvolutionCommand {

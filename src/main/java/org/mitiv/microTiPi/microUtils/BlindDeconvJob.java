@@ -22,14 +22,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microTiPi.microUtils;
+package org.mitiv.microTiPi.microUtils;
 
-import microTiPi.microscopy.MicroscopeModel;
-import microTiPi.microscopy.PSF_Estimation;
-import mitiv.array.ArrayUtils;
-import mitiv.array.ShapedArray;
-import mitiv.jobs.DeconvolutionJob;
-import mitiv.weights.WeightUpdater;
+import org.mitiv.microTiPi.microscopy.MicroscopeModel;
+import org.mitiv.microTiPi.microscopy.PSF_Estimation;
+
+import org.mitiv.TiPi.array.ArrayUtils;
+import org.mitiv.TiPi.array.ShapedArray;
+import org.mitiv.TiPi.jobs.DeconvolutionJob;
+import org.mitiv.TiPi.weights.WeightUpdater;
 
 /**
  * BlindDeconvJob is the solver for blind deconvolution

@@ -22,23 +22,23 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microTiPi.microscopy;
+package org.mitiv.microTiPi.microscopy;
 
-import mitiv.array.ShapedArray;
-import mitiv.base.Shape;
-import mitiv.conv.WeightedConvolutionCost;
-import mitiv.linalg.shaped.DoubleShapedVector;
-import mitiv.linalg.shaped.DoubleShapedVectorSpace;
-import mitiv.linalg.shaped.FloatShapedVectorSpace;
-import mitiv.linalg.shaped.ShapedVector;
-import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.optim.BoundProjector;
-import mitiv.optim.LineSearch;
-import mitiv.optim.MoreThuenteLineSearch;
-import mitiv.optim.OptimTask;
-import mitiv.optim.ReverseCommunicationOptimizer;
-import mitiv.optim.VMLMB;
-import mitiv.array.ArrayUtils;
+import org.mitiv.TiPi.array.ShapedArray;
+import org.mitiv.TiPi.base.Shape;
+import org.mitiv.TiPi.conv.WeightedConvolutionCost;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVector;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVectorSpace;
+import org.mitiv.TiPi.linalg.shaped.FloatShapedVectorSpace;
+import org.mitiv.TiPi.linalg.shaped.ShapedVector;
+import org.mitiv.TiPi.linalg.shaped.ShapedVectorSpace;
+import org.mitiv.TiPi.optim.BoundProjector;
+import org.mitiv.TiPi.optim.LineSearch;
+import org.mitiv.TiPi.optim.MoreThuenteLineSearch;
+import org.mitiv.TiPi.optim.OptimTask;
+import org.mitiv.TiPi.optim.ReverseCommunicationOptimizer;
+import org.mitiv.TiPi.optim.VMLMB;
+import org.mitiv.TiPi.array.ArrayUtils;
 
 /**
  * Define a class for PSF estimation. This class contains all the parameters

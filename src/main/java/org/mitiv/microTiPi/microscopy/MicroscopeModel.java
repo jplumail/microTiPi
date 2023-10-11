@@ -22,15 +22,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microTiPi.microscopy;
+package org.mitiv.microTiPi.microscopy;
 
-import mitiv.array.Array3D;
-import mitiv.base.Shape;
-import mitiv.linalg.shaped.DoubleShapedVector;
-import mitiv.linalg.shaped.DoubleShapedVectorSpace;
-import mitiv.linalg.shaped.ShapedVector;
-import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.psf.PsfModel;
+import org.mitiv.TiPi.array.Array3D;
+import org.mitiv.TiPi.base.Shape;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVector;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVectorSpace;
+import org.mitiv.TiPi.linalg.shaped.ShapedVector;
+import org.mitiv.TiPi.linalg.shaped.ShapedVectorSpace;
+import org.mitiv.TiPi.psf.PsfModel;
 /**
  * Abstract class for to model PSF of any fluorescence microscope
  *

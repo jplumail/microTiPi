@@ -22,9 +22,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microTiPi.microUtils;
+package org.mitiv.microTiPi.microUtils;
 
-import mitiv.utils.MathUtils;
+import org.mitiv.TiPi.utils.MathUtils;
 /** Compute Zernike polynomials
  *
  * [1] Robert J. Noll. Zernike polynomials and atmospheric turbulence. Optical

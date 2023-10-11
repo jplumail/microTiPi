@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package microTiPi.epifluorescence;
+package org.mitiv.microTiPi.epifluorescence;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,25 +37,25 @@ import org.jtransforms.fft.DoubleFFT_2D;
 import org.jtransforms.fft.DoubleFFT_3D;
 import org.jtransforms.fft.FloatFFT_2D;
 import org.jtransforms.fft.FloatFFT_3D;
+import org.mitiv.microTiPi.microUtils.Zernike;
+import org.mitiv.microTiPi.microscopy.MicroscopeModel;
 
-import microTiPi.microUtils.Zernike;
-import microTiPi.microscopy.MicroscopeModel;
-import mitiv.array.Array3D;
-import mitiv.array.Array4D;
-import mitiv.array.ArrayFactory;
-import mitiv.array.Double1D;
-import mitiv.array.Double2D;
-import mitiv.array.Double3D;
-import mitiv.array.Double4D;
-import mitiv.array.Float2D;
-import mitiv.array.Float3D;
-import mitiv.array.Float4D;
-import mitiv.base.Shape;
-import mitiv.linalg.shaped.DoubleShapedVector;
-import mitiv.linalg.shaped.DoubleShapedVectorSpace;
-import mitiv.linalg.shaped.ShapedVector;
-import mitiv.linalg.shaped.ShapedVectorSpace;
-import mitiv.utils.MathUtils;
+import org.mitiv.TiPi.array.Array3D;
+import org.mitiv.TiPi.array.Array4D;
+import org.mitiv.TiPi.array.ArrayFactory;
+import org.mitiv.TiPi.array.Double1D;
+import org.mitiv.TiPi.array.Double2D;
+import org.mitiv.TiPi.array.Double3D;
+import org.mitiv.TiPi.array.Double4D;
+import org.mitiv.TiPi.array.Float2D;
+import org.mitiv.TiPi.array.Float3D;
+import org.mitiv.TiPi.array.Float4D;
+import org.mitiv.TiPi.base.Shape;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVector;
+import org.mitiv.TiPi.linalg.shaped.DoubleShapedVectorSpace;
+import org.mitiv.TiPi.linalg.shaped.ShapedVector;
+import org.mitiv.TiPi.linalg.shaped.ShapedVectorSpace;
+import org.mitiv.TiPi.utils.MathUtils;
 
 /**
  * Compute a 3D point spread function of a wide field fluorescence microscope (WFFM)
