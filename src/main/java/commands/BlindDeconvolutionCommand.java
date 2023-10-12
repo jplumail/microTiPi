@@ -1,6 +1,5 @@
 package commands;
 
-import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -16,6 +15,7 @@ import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 import org.mitiv.microTiPi.microUtils.BlindDeconvJob;
 import org.mitiv.microTiPi.microscopy.PSF_Estimation;
 import org.mitiv.TiPi.array.ArrayFactory;
+import org.mitiv.TiPi.array.ArrayUtils;
 import org.mitiv.TiPi.array.ShapedArray;
 import org.mitiv.TiPi.base.Shape;
 import org.mitiv.TiPi.conv.WeightedConvolutionCost;
@@ -26,11 +26,11 @@ import org.mitiv.TiPi.jobs.DeconvolutionJob;
 import org.mitiv.TiPi.linalg.shaped.DoubleShapedVectorSpace;
 import org.mitiv.TiPi.linalg.shaped.FloatShapedVectorSpace;
 import org.mitiv.TiPi.linalg.shaped.ShapedVectorSpace;
+import org.mitiv.TiPi.utils.FFTUtils;
+import org.mitiv.TiPi.utils.HistoMap;
 import org.mitiv.TiPi.weights.weightsFromModel;
 
 import loci.formats.FormatException;
-import loci.formats.ImageReader;
-import loci.formats.gui.BufferedImageReader;
 import loci.formats.in.OMETiffReader;
 
 public class BlindDeconvolutionCommand {
@@ -58,8 +58,8 @@ public class BlindDeconvolutionCommand {
     @Option(name = "-NA", usage = "Numerical aperture")
     private double NA = 1.4;
 
-    @Option(name = "-lambda", usage = "Wavelength in m")
-    private double lambda = 0.00000054; // 540nm
+    @Option(name = "-lambda", usage = "Wavelength in nm")
+    private double lambda = 540; // 540nm
 
     @Option(name = "-ni", usage = "Refractive index")
     private double ni = 1.518;
@@ -112,6 +112,11 @@ public class BlindDeconvolutionCommand {
         System.exit(code);
     }
 
+    private static WideFieldModel buildPupil(BlindDeconvolutionCommand job, Shape psfShape) {
+        WideFieldModel pupil = new WideFieldModel(psfShape, job.nPhase, job.nModulus, job.NA, job.lambda*1E-9, job.ni, job.dxy*1E-9, job.dz*1E-9, job.radial, job.single);
+        return pupil;
+    }
+
 
     public static void main(String[] args) throws FormatException, IOException {
 
@@ -157,32 +162,46 @@ public class BlindDeconvolutionCommand {
             ByteBuffer buffer = ByteBuffer.allocate((int) (bufferSizeInBits)); // Convert bits to bytes
             for (int i=0; i<reader.getSizeZ(); i++) {
                 byte[] plane = reader.openBytes(i);
-                System.out.println(i);
-                System.out.println(plane.length);
                 buffer.put(plane);
             }
             ShapedArray dataArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
 
             job.stream.format("dataArray shape: %s\n", dataArray.getShape());
-            Shape psfShape = new Shape(16, 16, 16); // possible?
-            WideFieldModel pupil = new WideFieldModel(dataArray.getShape(), job.nPhase, job.nModulus, job.NA, job.lambda, job.ni, job.dxy, job.dz, job.radial, job.single);
+            Shape psfShape = new Shape(64, 64, 64); // possible?
+            WideFieldModel pupil = buildPupil(job, psfShape);
+            
             PSF_Estimation psfEstimation = new PSF_Estimation(pupil);
+            ShapedArray psfArray = ArrayUtils.roll( pupil.getPsf() );
+
 
             ShapedVectorSpace dataSpace, objectSpace;
+            int Nx, Ny, Nz;
+            Nx = FFTUtils.bestDimension(sizeX);
+            Ny = FFTUtils.bestDimension(sizeY);
+            Nz= FFTUtils.bestDimension(sizeZ);
+            Shape outputShape = new Shape(Nx, Ny, Nz);
             if (job.single) {
-                objectSpace = new FloatShapedVectorSpace(dataArray.getShape());
                 dataSpace = new FloatShapedVectorSpace(dataArray.getShape());
+                objectSpace = new FloatShapedVectorSpace(outputShape);
             }
             else {
-                objectSpace = new DoubleShapedVectorSpace(dataArray.getShape());
                 dataSpace = new DoubleShapedVectorSpace(dataArray.getShape());
+                objectSpace = new DoubleShapedVectorSpace(outputShape);
             }
+            dataArray = ArrayUtils.extract(dataArray, outputShape, 0.);
             double[] scale = {1, 1, job.dz / job.dxy};
             DifferentiableCostFunction fprior = new HyperbolicTotalVariation(objectSpace, job.epsilon, scale);
             WeightedConvolutionCost fdata =  WeightedConvolutionCost.build(objectSpace, dataSpace);
             DeconvolutionJob deconvolver = new DeconvolutionJob(fdata, job.mu, fprior, !job.negativity, job.nbIterDeconv, null, null); // hooks to null
 
-            weightsFromModel wghtUpdt = new weightsFromModel(dataArray, null); // badPixArray to null, no pb?
+            weightsFromModel wghtUpdt = new weightsFromModel(dataArray, null); // badPixArray to null
+            HistoMap hm = new HistoMap(modelArray, dataArray, null);
+            gain.setValue(hm.getAlpha());
+            noise.setValue(Math.sqrt(hm.getBeta())/gain.getValue());
+            wgtArray = hm.computeWeightMap(modelArray);
+            wghtUpdt.update(deconvolver); // compute weights: option 5 Automatic variance estimation TODO: implement other methods (https://github.com/FerreolS/tipi4icy/blob/master/src/plugins/ferreol/demics/DEMICSPlug.java#L123)
+            fdata.setData(dataArray);
+            fdata.setPSF(psfArray);
 
             int[] maxiter = {job.maxIterDefocus, job.maxIterPhase, job.maxIterModulus};
             BlindDeconvJob bdec = new BlindDeconvJob(job.loops, pupil.getParametersFlags(), maxiter, psfEstimation, deconvolver, wghtUpdt, job.debug);
