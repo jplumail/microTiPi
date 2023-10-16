@@ -39,6 +39,7 @@ import loci.formats.FormatException;
 import loci.formats.ImageWriter;
 import loci.formats.in.OMETiffReader;
 import loci.formats.meta.IMetadata;
+import loci.formats.out.OMETiffWriter;
 import loci.formats.services.OMEXMLService;
 import ome.xml.model.enums.DimensionOrder;
 import ome.xml.model.enums.PixelType;
@@ -227,7 +228,13 @@ public class BlindDeconvolutionCommand {
         );
 
         // run blinddeconv
+        // System.out.println("Blind deconv");
+        // long startTime = System.nanoTime();
         objArray = bdec.blindDeconv(objArray);
+        // long endTime = System.nanoTime();
+        // long elapsedTime = endTime - startTime;
+        // double elapsedTimeInSeconds = (double) elapsedTime / 1_000_000_000.0;
+        // System.out.println("Elapsed Time: " + elapsedTimeInSeconds + " seconds");
         
         // get the psf
         pupil = ((WideFieldModel) psfEstimation.getModel());
@@ -277,6 +284,8 @@ public class BlindDeconvolutionCommand {
 
     private static void saveArray(String path, ShapedArray arr, boolean single)
     throws DependencyException, ServiceException, FormatException, IOException {
+        // System.out.println("Start saving");
+        // long startTime = System.nanoTime();
         ServiceFactory factory = new ServiceFactory();
         OMEXMLService service = factory.getInstance(OMEXMLService.class);
         IMetadata omexml = service.createOMEXMLMetadata();
@@ -297,12 +306,18 @@ public class BlindDeconvolutionCommand {
         omexml.setChannelID("Channel:0:0", 0, 0);
         omexml.setChannelSamplesPerPixel(new PositiveInteger(1),0, 0);
 
-        ImageWriter writer = new ImageWriter();
-        writer.setMetadataRetrieve(omexml);
-        writer.setId(path);
+        ImageWriter imwriter = new ImageWriter();
+        imwriter.setMetadataRetrieve(omexml);
+        imwriter.setId(path);
+        OMETiffWriter writer = (OMETiffWriter) imwriter.getWriter();
+        // tiffWriter.setCompression(OMETiffWriter.COMPRESSION_UNCOMPRESSED);
         Array3D data = (Array3D) arr;
+        // long rowsPerStrip = 64000; // use all rows
+        // long[] rowsPerStripArray = new long[]{ rowsPerStrip };
         if (single){
             for (int image=0; image<arr.getDimension(2); image++) {
+                // IFD ifd = new IFD();
+                //ifd.put( IFD.ROWS_PER_STRIP, rowsPerStripArray );
                 float[] plane = (float[]) data.slice(image, 2).flatten(true);
                 ByteBuffer bb = ByteBuffer.allocate(plane.length * 4);
                 for (float d: plane) {
@@ -312,6 +327,8 @@ public class BlindDeconvolutionCommand {
             }
         } else{
             for (int image=0; image<arr.getDimension(2); image++) {
+                // IFD ifd = new IFD();
+                //ifd.put( IFD.ROWS_PER_STRIP, rowsPerStripArray );
                 double[] plane = (double[]) data.slice(image, 2).flatten(true);
                 ByteBuffer bb = ByteBuffer.allocate(plane.length * 8);
                 for (double d: plane) {
@@ -321,5 +338,11 @@ public class BlindDeconvolutionCommand {
             }
         }
         writer.close();
+        imwriter.close();
+        // long endTime = System.nanoTime();
+        // long elapsedTime = endTime - startTime;
+        // double elapsedTimeInSeconds = (double) elapsedTime / 1_000_000_000.0;
+        // System.out.println("Elapsed Time: " + elapsedTimeInSeconds + " seconds");
+
     }
 }
