@@ -8,6 +8,8 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import loci.common.services.DependencyException;
+import loci.common.services.ServiceException;
 import loci.formats.FormatException;
 
 public class MainCommand {
@@ -19,7 +21,7 @@ public class MainCommand {
     @Argument
     private String args;
 
-    public static void main(String[] args) throws FormatException, IOException {
+    public static void main(String[] args) throws FormatException, IOException, DependencyException, ServiceException {
         MainCommand job = new MainCommand();
         if (args.length > 1){
             String[] newArgs = Arrays.copyOfRange(args, 1, args.length);

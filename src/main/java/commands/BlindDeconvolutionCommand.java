@@ -14,24 +14,37 @@ import org.kohsuke.args4j.Option;
 import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 import org.mitiv.microTiPi.microUtils.BlindDeconvJob;
 import org.mitiv.microTiPi.microscopy.PSF_Estimation;
+import org.mitiv.TiPi.array.Array3D;
 import org.mitiv.TiPi.array.ArrayFactory;
 import org.mitiv.TiPi.array.ArrayUtils;
+import org.mitiv.TiPi.array.DoubleArray;
+import org.mitiv.TiPi.array.FloatArray;
 import org.mitiv.TiPi.array.ShapedArray;
 import org.mitiv.TiPi.base.Shape;
 import org.mitiv.TiPi.conv.WeightedConvolutionCost;
 import org.mitiv.TiPi.cost.DifferentiableCostFunction;
 import org.mitiv.TiPi.cost.HyperbolicTotalVariation;
-import org.mitiv.TiPi.io.DataFormat;
 import org.mitiv.TiPi.jobs.DeconvolutionJob;
 import org.mitiv.TiPi.linalg.shaped.DoubleShapedVectorSpace;
 import org.mitiv.TiPi.linalg.shaped.FloatShapedVectorSpace;
 import org.mitiv.TiPi.linalg.shaped.ShapedVectorSpace;
 import org.mitiv.TiPi.utils.FFTUtils;
-import org.mitiv.TiPi.utils.HistoMap;
+import org.mitiv.io.DeconvHook;
+import org.mitiv.io.NullImager;
+import org.mitiv.TiPi.weights.WeightFactory;
 import org.mitiv.TiPi.weights.weightsFromModel;
 
+import loci.common.services.DependencyException;
+import loci.common.services.ServiceException;
+import loci.common.services.ServiceFactory;
 import loci.formats.FormatException;
+import loci.formats.ImageWriter;
 import loci.formats.in.OMETiffReader;
+import loci.formats.meta.IMetadata;
+import loci.formats.services.OMEXMLService;
+import ome.xml.model.enums.DimensionOrder;
+import ome.xml.model.enums.PixelType;
+import ome.xml.model.primitives.PositiveInteger;
 
 public class BlindDeconvolutionCommand {
     private PrintStream stream = System.out;
@@ -118,7 +131,7 @@ public class BlindDeconvolutionCommand {
     }
 
 
-    public static void main(String[] args) throws FormatException, IOException {
+    public static void main(String[] args) throws FormatException, IOException, DependencyException, ServiceException {
 
         // Switch to "US" locale to avoid problems with number formats.
         Locale.setDefault(Locale.US);
@@ -159,20 +172,26 @@ public class BlindDeconvolutionCommand {
             int bufferSizeInBits = bitsPerPixel * sizeX * sizeY * sizeZ;
 
             // Allocate the ByteBuffer
-            ByteBuffer buffer = ByteBuffer.allocate((int) (bufferSizeInBits)); // Convert bits to bytes
+            ByteBuffer buffer = ByteBuffer.allocate(bufferSizeInBits); // Convert bits to bytes
             for (int i=0; i<reader.getSizeZ(); i++) {
                 byte[] plane = reader.openBytes(i);
                 buffer.put(plane);
             }
-            ShapedArray dataArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
+            ShapedArray dataArray;
+            if (job.single) {
+                ShapedArray shapedArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
+                FloatArray floatArray = shapedArray.toFloat();
+                floatArray.scale(1/floatArray.max());
+                dataArray = (ShapedArray) floatArray;
+            } else {
+                ShapedArray shapedArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
+                DoubleArray doubleArray = shapedArray.toDouble();
+                doubleArray.scale(1/doubleArray.max());
+                dataArray = (ShapedArray) doubleArray;
+            }
+            
 
             job.stream.format("dataArray shape: %s\n", dataArray.getShape());
-            Shape psfShape = new Shape(64, 64, 64); // possible?
-            WideFieldModel pupil = buildPupil(job, psfShape);
-            
-            PSF_Estimation psfEstimation = new PSF_Estimation(pupil);
-            ShapedArray psfArray = ArrayUtils.roll( pupil.getPsf() );
-
 
             ShapedVectorSpace dataSpace, objectSpace;
             int Nx, Ny, Nz;
@@ -180,6 +199,16 @@ public class BlindDeconvolutionCommand {
             Ny = FFTUtils.bestDimension(sizeY);
             Nz= FFTUtils.bestDimension(sizeZ);
             Shape outputShape = new Shape(Nx, Ny, Nz);
+
+            WideFieldModel pupil = buildPupil(job, outputShape);
+            PSF_Estimation psfEstimation = new PSF_Estimation(pupil);
+            ShapedArray psfArray = ArrayUtils.roll( pupil.getPsf() );
+
+            NullImager imager = new NullImager();
+            DeconvHook dHook = new DeconvHook(imager, outputShape,null, job.debug);
+            DeconvHook dHookfinal = new DeconvHook(imager, outputShape,"Deconvolved", job.debug);
+
+
             if (job.single) {
                 dataSpace = new FloatShapedVectorSpace(dataArray.getShape());
                 objectSpace = new FloatShapedVectorSpace(outputShape);
@@ -188,28 +217,81 @@ public class BlindDeconvolutionCommand {
                 dataSpace = new DoubleShapedVectorSpace(dataArray.getShape());
                 objectSpace = new DoubleShapedVectorSpace(outputShape);
             }
-            dataArray = ArrayUtils.extract(dataArray, outputShape, 0.);
             double[] scale = {1, 1, job.dz / job.dxy};
             DifferentiableCostFunction fprior = new HyperbolicTotalVariation(objectSpace, job.epsilon, scale);
             WeightedConvolutionCost fdata =  WeightedConvolutionCost.build(objectSpace, dataSpace);
-            DeconvolutionJob deconvolver = new DeconvolutionJob(fdata, job.mu, fprior, !job.negativity, job.nbIterDeconv, null, null); // hooks to null
+            DeconvolutionJob deconvolver = new DeconvolutionJob(fdata, job.mu, fprior, !job.negativity, job.nbIterDeconv, dHook, dHookfinal); // hooks to null
 
-            weightsFromModel wghtUpdt = new weightsFromModel(dataArray, null); // badPixArray to null
-            HistoMap hm = new HistoMap(modelArray, dataArray, null);
-            gain.setValue(hm.getAlpha());
-            noise.setValue(Math.sqrt(hm.getBeta())/gain.getValue());
-            wgtArray = hm.computeWeightMap(modelArray);
-            wghtUpdt.update(deconvolver); // compute weights: option 5 Automatic variance estimation TODO: implement other methods (https://github.com/FerreolS/tipi4icy/blob/master/src/plugins/ferreol/demics/DEMICSPlug.java#L123)
+            // Compute variance method, TODO: implement others
+            weightsFromModel wghtUpdt = null; // wghtUpdt to null because Compute variance method
+            double gamma = 1.;
+            double sigma = 10.;
+            double alpha = gamma;
+            double beta = (sigma/gamma)*(sigma/gamma);
+            ShapedArray wgtArray = WeightFactory.computeWeightsFromData(dataArray, alpha, beta);
+            WeightFactory.normalize(wgtArray);
             fdata.setData(dataArray);
+            fdata.setWeights(wgtArray,true);
             fdata.setPSF(psfArray);
+
+            ShapedArray objArray = dataArray.copy();
+            objArray = ArrayUtils.extract(objArray, outputShape, 0.); //Padding to the right size
+
+            psfEstimation.setData(ArrayUtils.pad(dataArray,outputShape));
+            psfEstimation.setWeight(ArrayUtils.pad(wgtArray,outputShape));
+            psfEstimation.enablePositivity(false);
+            psfEstimation.setAbsoluteTolerance(0.0);
 
             int[] maxiter = {job.maxIterDefocus, job.maxIterPhase, job.maxIterModulus};
             BlindDeconvJob bdec = new BlindDeconvJob(job.loops, pupil.getParametersFlags(), maxiter, psfEstimation, deconvolver, wghtUpdt, job.debug);
 
-            dataArray = bdec.blindDeconv(dataArray);
+            objArray = bdec.blindDeconv(objArray);
             
             try {
-                DataFormat.save(dataArray, outputName);
+                ServiceFactory factory = new ServiceFactory();
+                OMEXMLService service = factory.getInstance(OMEXMLService.class);
+                IMetadata omexml = service.createOMEXMLMetadata();
+                omexml.setImageID("Image:0", 0);
+                omexml.setPixelsID("Pixels:0", 0);
+                omexml.setPixelsBinDataBigEndian(Boolean.FALSE, 0, 0);
+                omexml.setPixelsDimensionOrder(DimensionOrder.XYCZT, 0);
+                if (job.single) {
+                    omexml.setPixelsType(PixelType.FLOAT, 0);
+                } else {
+                    omexml.setPixelsType(PixelType.DOUBLE, 0);
+                }
+                omexml.setPixelsSizeX(new PositiveInteger(Nx), 0);
+                omexml.setPixelsSizeY(new PositiveInteger(Ny), 0);
+                omexml.setPixelsSizeZ(new PositiveInteger(Nz), 0);
+                omexml.setPixelsSizeT(new PositiveInteger(1), 0);
+                omexml.setPixelsSizeC(new PositiveInteger(1), 0);
+                omexml.setChannelID("Channel:0:0", 0, 0);
+                omexml.setChannelSamplesPerPixel(new PositiveInteger(1),0, 0);
+
+                ImageWriter writer = new ImageWriter();
+                writer.setMetadataRetrieve(omexml);
+                writer.setId(outputName);
+                Array3D data = (Array3D) objArray;
+                if (job.single){
+                    for (int image=0; image<Nz; image++) {
+                        float[] plane = (float[]) data.slice(image, 2).flatten(true);
+                        ByteBuffer bb = ByteBuffer.allocate(plane.length * 4);
+                        for (float d: plane) {
+                            bb.putFloat(d);
+                        }
+                        writer.saveBytes(image, bb.array());
+                    }
+                } else{
+                    for (int image=0; image<Nz; image++) {
+                        double[] plane = (double[]) data.slice(image, 2).flatten(true);
+                        ByteBuffer bb = ByteBuffer.allocate(plane.length * 8);
+                        for (double d: plane) {
+                            bb.putDouble(d);
+                        }
+                        writer.saveBytes(image, bb.array());
+                    }
+                }
+                writer.close();
             } catch (FileNotFoundException e) {
                 job.stream.format("File %s not found.\n", outputName);
             } catch (IOException e){
