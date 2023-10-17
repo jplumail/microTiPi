@@ -53,38 +53,38 @@ import ome.xml.model.primitives.PositiveInteger;
 
 public class BlindDeconvolutionCommand {
 
-    @Option(name = "-nbloops", usage = "number of loops")
+    @Option(name = "-nbloops", usage = "number of loops", metaVar = "N")
     private int loops = 1;
 
-    @Option(name = "-maxIterDefocus", usage = "Max number of iterations for defocus.")
+    @Option(name = "-maxIterDefocus", usage = "Max number of iterations for defocus", metaVar = "N")
     private int maxIterDefocus = 20;
 
-    @Option(name = "-maxIterPhase", usage = "Max number of iterations for phase.")
+    @Option(name = "-maxIterPhase", usage = "Max number of iterations for phase", metaVar = "N")
     private int maxIterPhase = 20;
 
-    @Option(name = "-maxIterModulus", usage = "Max number of iterations for modulus.")
+    @Option(name = "-maxIterModulus", usage = "Max number of iterations for modulus", metaVar = "N")
     private int maxIterModulus = 0;
 
     // WidefieldModel args
-    @Option(name = "-nPhase", usage = "Number of zernike describing the pupil phase.")
+    @Option(name = "-nPhase", usage = "Number of zernike describing the pupil phase", metaVar = "N")
     private int nPhase = 19;
 
-    @Option(name = "-nModulus", usage = "Number of zernike describing the pupil modulus.")
+    @Option(name = "-nModulus", usage = "Number of zernike describing the pupil modulus", metaVar = "N")
     private int nModulus = 0;
 
-    @Option(name = "-NA", usage = "Numerical aperture")
+    @Option(name = "-NA", usage = "Numerical aperture", metaVar = "NA")
     private double NA = 1.4;
 
-    @Option(name = "-lambda", usage = "Wavelength in nm")
+    @Option(name = "-lambda", usage = "Wavelength in nm", metaVar = "lambda")
     private double lambda = 540; // 540nm
 
-    @Option(name = "-ni", usage = "Refractive index")
+    @Option(name = "-ni", usage = "Refractive index", metaVar = "ni")
     private double ni = 1.518;
 
-    @Option(name = "-dxy", usage = "Lateral pixel size in nm")
+    @Option(name = "-dxy", usage = "Lateral pixel size in nm", metaVar = "dxy")
     private double dxy = 1.;
 
-    @Option(name = "-dz", usage = "Axial pixel size in nm")
+    @Option(name = "-dz", usage = "Axial pixel size in nm", metaVar = "dz")
     private double dz = 1.;
 
     @Option(name = "-radial", usage = "Radial option")
@@ -93,39 +93,37 @@ public class BlindDeconvolutionCommand {
     @Option(name = "-single", usage = "Compute in single precision")
     private boolean single;
 
-
     // Noise model args
     private enum WeightingMethod { CONSTANT, VAR_MAP, INVERSE_VAR_MAP, COMPUTED_VAR_MAP, AUTOMATIC_VAR_MAP };
-    @Option(name = "-weighting")
+    @Option(name = "-weighting", metaVar = "weighting")
     private WeightingMethod weighting = WeightingMethod.COMPUTED_VAR_MAP;
 
     // if weighting is VAR_MAP or INVERSE_VAR_MAP
-    @Option(name = "-map", usage = "Map of space varying noise or precision.")
+    @Option(name = "-map", usage = "Map of space varying noise or precision", metaVar = "mapPath")
     private String mapPath;
 
     // if weighting is COMPUTED_VAR_MAP or AUTOMATIC_VAR_MAP
-    @Option(name = "-gain", usage = "The detector gain in electrons per analog digital unit (ADU)")
+    @Option(name = "-gain", usage = "The detector gain in electrons per analog digital unit (ADU)", metaVar = "gain")
     private double gain = 1;
 
-    @Option(name = "-readoutNoise", usage = "The standard deviation of the read-out noise in electron/pixel")
+    @Option(name = "-readoutNoise", usage = "The standard deviation of the read-out noise in electron/pixel", metaVar = "sigma")
     private double sigma = 10;
 
     // optional baddata map
-    @Option(name = "-badDataMap", usage = "A binary map with 0 for bad pixels.")
+    @Option(name = "-badDataMap", usage = "A binary map with 0 for bad pixels", metaVar = "badDataPath")
     private String badDataPath;
 
-
     // Deconvolution args
-    @Option(name = "-epsilon", usage = "threshold of Hyperbolic TV")
+    @Option(name = "-epsilon", usage = "threshold of Hyperbolic TV", metaVar = "epsilon")
     private double epsilon = 0.01;
 
-    @Option(name = "-mu", usage = "Value of mu. Must be positive")
+    @Option(name = "-mu", usage = "Value of mu. Must be positive", metaVar = "mu")
     private double mu = 1.;
 
     @Option(name = "-negativity", usage = "Allow negativity")
     private boolean negativity;
 
-    @Option(name = "-nbIterDeconv", usage = "Number of iterations for deconvolution")
+    @Option(name = "-nbIterDeconv", usage = "Number of iterations for deconvolution", metaVar = "N")
     private int nbIterDeconv = 50;
 
     // Misc
