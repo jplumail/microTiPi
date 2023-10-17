@@ -2,7 +2,6 @@ package commands;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -14,8 +13,6 @@ import org.kohsuke.args4j.Option;
 import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 import org.mitiv.microTiPi.microUtils.BlindDeconvJob;
 import org.mitiv.microTiPi.microscopy.PSF_Estimation;
-
-import org.mitiv.TiPi.array.Array3D;
 import org.mitiv.TiPi.array.ArrayFactory;
 import org.mitiv.TiPi.array.ArrayUtils;
 import org.mitiv.TiPi.array.ByteArray;
@@ -40,16 +37,7 @@ import org.mitiv.TiPi.weights.weightsFromModel;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
-import loci.common.services.ServiceFactory;
 import loci.formats.FormatException;
-import loci.formats.ImageWriter;
-import loci.formats.in.OMETiffReader;
-import loci.formats.meta.IMetadata;
-import loci.formats.out.OMETiffWriter;
-import loci.formats.services.OMEXMLService;
-import ome.xml.model.enums.DimensionOrder;
-import ome.xml.model.enums.PixelType;
-import ome.xml.model.primitives.PositiveInteger;
 
 public class BlindDeconvolutionCommand {
 
@@ -179,7 +167,7 @@ public class BlindDeconvolutionCommand {
         if (job.weighting == WeightingMethod.INVERSE_VAR_MAP) {
             // A map of weights is provided.
             if (job.mapPath != null) {
-                wgtArray = readOMETiff(job.mapPath, job.single);
+                wgtArray = MainCommand.loadData(job.mapPath, job.single);
                 if (!wgtArray.getShape().equals(dataShape)) {
                     throw new IllegalArgumentException("Weight map must have the same size than the data");
                 }
@@ -187,7 +175,7 @@ public class BlindDeconvolutionCommand {
         } else if (job.weighting == WeightingMethod.VAR_MAP) {
             // A variance map is provided. FIXME: check shape and values. (ferreol comment)
             if (job.mapPath != null) {
-                ShapedArray varArray = readOMETiff(job.mapPath, job.single);
+                ShapedArray varArray = MainCommand.loadData(job.mapPath, job.single);
                 if (!varArray.getShape().equals(dataShape)) {
                     throw new IllegalArgumentException("Weight map must have the same size than the data");
                 }
@@ -268,7 +256,7 @@ public class BlindDeconvolutionCommand {
         String psfName = job.arguments.get(2);
         
         // Read input file
-        ShapedArray dataArray = readOMETiff(inputName, job.single);
+        ShapedArray dataArray = MainCommand.loadData(inputName, job.single);
 
         // Compute output shape
         ShapedVectorSpace dataSpace, objectSpace;
@@ -370,108 +358,7 @@ public class BlindDeconvolutionCommand {
         pupil.freeMem();
 
         // save arrays
-        saveArray(outputName, objArray, job.single);
-        saveArray(psfName, ArrayUtils.roll(pupil.getPsf()), job.single);
-    }
-
-    private static ShapedArray readOMETiff(String path, boolean single) throws FormatException, IOException {
-        OMETiffReader reader = new OMETiffReader();
-        reader.setId(path);
-        if (reader.getSeriesCount()>1 || reader.getSizeT()>1 || reader.getSizeC()>1) {
-            reader.close();
-            throw new FormatException("File no good shape (Series:%d, T:%d, C:%d)".formatted(reader.getSeriesCount(), reader.getSizeT(), reader.getSizeC()));
-        }
-        reader.setSeries(0);
-        int bitsPerPixel = reader.getBitsPerPixel();
-        int sizeX = reader.getSizeX();
-        int sizeY = reader.getSizeY();
-        int sizeZ = reader.getSizeZ();
-        // Calculate the size in bits
-        int bufferSizeInBits = bitsPerPixel * sizeX * sizeY * sizeZ;
-
-        // Allocate the ByteBuffer
-        ByteBuffer buffer = ByteBuffer.allocate(bufferSizeInBits);
-        for (int i=0; i<reader.getSizeZ(); i++) {
-            byte[] plane = reader.openBytes(i);
-            buffer.put(plane);
-        }
-        ShapedArray dataArray;
-        if (single) {
-            ShapedArray shapedArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
-            FloatArray floatArray = shapedArray.toFloat();
-            floatArray.scale(1/floatArray.max());
-            dataArray = (ShapedArray) floatArray;
-        } else {
-            ShapedArray shapedArray = ArrayFactory.wrap(buffer.array(), reader.getSizeX(), reader.getSizeY(), reader.getSizeZ());
-            DoubleArray doubleArray = shapedArray.toDouble();
-            doubleArray.scale(1/doubleArray.max());
-            dataArray = (ShapedArray) doubleArray;
-        }
-        reader.close();
-        return dataArray;
-    }
-
-    private static void saveArray(String path, ShapedArray arr, boolean single)
-    throws DependencyException, ServiceException, FormatException, IOException {
-        // System.out.println("Start saving");
-        // long startTime = System.nanoTime();
-        ServiceFactory factory = new ServiceFactory();
-        OMEXMLService service = factory.getInstance(OMEXMLService.class);
-        IMetadata omexml = service.createOMEXMLMetadata();
-        omexml.setImageID("Image:0", 0);
-        omexml.setPixelsID("Pixels:0", 0);
-        omexml.setPixelsBinDataBigEndian(Boolean.FALSE, 0, 0);
-        omexml.setPixelsDimensionOrder(DimensionOrder.XYCZT, 0);
-        if (single) {
-            omexml.setPixelsType(PixelType.FLOAT, 0);
-        } else {
-            omexml.setPixelsType(PixelType.DOUBLE, 0);
-        }
-        omexml.setPixelsSizeX(new PositiveInteger(arr.getDimension(0)), 0);
-        omexml.setPixelsSizeY(new PositiveInteger(arr.getDimension(1)), 0);
-        omexml.setPixelsSizeZ(new PositiveInteger(arr.getDimension(2)), 0);
-        omexml.setPixelsSizeT(new PositiveInteger(1), 0);
-        omexml.setPixelsSizeC(new PositiveInteger(1), 0);
-        omexml.setChannelID("Channel:0:0", 0, 0);
-        omexml.setChannelSamplesPerPixel(new PositiveInteger(1),0, 0);
-
-        ImageWriter imwriter = new ImageWriter();
-        imwriter.setMetadataRetrieve(omexml);
-        imwriter.setId(path);
-        OMETiffWriter writer = (OMETiffWriter) imwriter.getWriter();
-        // tiffWriter.setCompression(OMETiffWriter.COMPRESSION_UNCOMPRESSED);
-        Array3D data = (Array3D) arr;
-        // long rowsPerStrip = 64000; // use all rows
-        // long[] rowsPerStripArray = new long[]{ rowsPerStrip };
-        if (single){
-            for (int image=0; image<arr.getDimension(2); image++) {
-                // IFD ifd = new IFD();
-                //ifd.put( IFD.ROWS_PER_STRIP, rowsPerStripArray );
-                float[] plane = (float[]) data.slice(image, 2).flatten(true);
-                ByteBuffer bb = ByteBuffer.allocate(plane.length * 4);
-                for (float d: plane) {
-                    bb.putFloat(d);
-                }
-                writer.saveBytes(image, bb.array());
-            }
-        } else{
-            for (int image=0; image<arr.getDimension(2); image++) {
-                // IFD ifd = new IFD();
-                //ifd.put( IFD.ROWS_PER_STRIP, rowsPerStripArray );
-                double[] plane = (double[]) data.slice(image, 2).flatten(true);
-                ByteBuffer bb = ByteBuffer.allocate(plane.length * 8);
-                for (double d: plane) {
-                    bb.putDouble(d);
-                }
-                writer.saveBytes(image, bb.array());
-            }
-        }
-        writer.close();
-        imwriter.close();
-        // long endTime = System.nanoTime();
-        // long elapsedTime = endTime - startTime;
-        // double elapsedTimeInSeconds = (double) elapsedTime / 1_000_000_000.0;
-        // System.out.println("Elapsed Time: " + elapsedTimeInSeconds + " seconds");
-
+        MainCommand.saveArrayToOMETiff(outputName, objArray, job.single);
+        MainCommand.saveArrayToOMETiff(psfName, ArrayUtils.roll(pupil.getPsf()), job.single);
     }
 }

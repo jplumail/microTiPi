@@ -39,10 +39,13 @@ import org.mitiv.TiPi.array.ArrayUtils;
 import org.mitiv.TiPi.array.ShapedArray;
 import org.mitiv.TiPi.base.Shape;
 import org.mitiv.TiPi.invpb.EdgePreservingDeconvolution;
-import org.mitiv.TiPi.io.ColorModel;
 import org.mitiv.TiPi.io.DataFormat;
 import org.mitiv.TiPi.optim.OptimTask;
 import org.mitiv.TiPi.utils.FFTUtils;
+
+import loci.common.services.DependencyException;
+import loci.common.services.ServiceException;
+import loci.formats.FormatException;
 
 
 public class EdgePreservingDeconvolutionCommand {
@@ -120,18 +123,6 @@ public class EdgePreservingDeconvolutionCommand {
     @Argument
     private List<String> arguments;
 
-    public static ShapedArray loadData(String name, boolean single) {
-        ShapedArray arr = DataFormat.load(name);
-        ColorModel colorModel = ColorModel.guessColorModel(arr);
-        if (colorModel == ColorModel.NONE) {
-            return (single ? arr.toFloat() :  arr.toDouble());
-        } else {
-            return (single
-                    ? ColorModel.filterImageAsFloat(arr, ColorModel.GRAY)
-                            : ColorModel.filterImageAsDouble(arr, ColorModel.GRAY));
-        }
-    }
-
     static private void usage(CmdLineParser parser, int code) {
         PrintStream stream = (code == 0 ? System.out : System.err);
         stream.println("Usage: deconv [OPTIONS] INPUT OUTPUT");
@@ -145,7 +136,7 @@ public class EdgePreservingDeconvolutionCommand {
         System.exit(code);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws DependencyException, ServiceException, FormatException, IOException {
 
         // Switch to "US" locale to avoid problems with number formats.
         Locale.setDefault(Locale.US);
@@ -177,9 +168,9 @@ public class EdgePreservingDeconvolutionCommand {
         try {
             // Read the blurred data and the PSF.
             solver.setForceSinglePrecision(job.single);
-            solver.setData(loadData(inputName, job.single));
+            solver.setData(MainCommand.loadData(inputName, job.single));
             if (job.psfName != null) {
-                solver.setPSF(loadData(job.psfName, job.single), job.normalizePSF);
+                solver.setPSF(MainCommand.loadData(job.psfName, job.single), job.normalizePSF);
             }
 
             // Deal with the weights.
@@ -188,7 +179,7 @@ public class EdgePreservingDeconvolutionCommand {
                 if (! isnan(job.sigma) || ! isnan(job.gamma)) {
                     System.err.println("Warning: options `-gain` and `-noise` are ignored when `-weights` is specified.");
                 }
-                solver.setWeights(loadData(job.weightsName, job.single));
+                solver.setWeights(MainCommand.loadData(job.weightsName, job.single));
             } else {
                 if (isnan(job.sigma) && ! isnan(job.gamma)) {
                     System.err.println("Warning: option `-gain` alone is ignored, use it with `-noise`.");
@@ -200,7 +191,7 @@ public class EdgePreservingDeconvolutionCommand {
             // Deal with bad pixels.
             if (job.invalidName != null) {
                 // FIXME: there should be a way to load a mask (i.e. as a boolean array)
-                solver.setBads(loadData(job.invalidName, job.single));
+                solver.setBads(MainCommand.loadData(job.invalidName, job.single));
             }
 
             // Compute dimensions of result.
@@ -241,7 +232,7 @@ public class EdgePreservingDeconvolutionCommand {
 
             // Result and initial solution.
             if (job.initName != null) {
-                solver.setInitialSolution(loadData(job.initName, job.single));
+                solver.setInitialSolution(MainCommand.loadData(job.initName, job.single));
             }
 
             solver.setAbsoluteTolerance(job.gatol);
@@ -301,7 +292,7 @@ public class EdgePreservingDeconvolutionCommand {
             if (job.crop) {
                 arr = ArrayUtils.crop(arr, solver.getData().getShape());
             }
-            DataFormat.save(arr, outputName);
+            MainCommand.saveArrayToOMETiff(outputName, arr, false);;
         } catch (final IOException e) {
             if (job.debug) {
                 e.printStackTrace();
