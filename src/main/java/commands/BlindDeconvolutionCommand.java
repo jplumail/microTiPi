@@ -13,13 +13,16 @@ import org.kohsuke.args4j.Option;
 import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 import org.mitiv.microTiPi.microUtils.BlindDeconvJob;
 import org.mitiv.microTiPi.microscopy.PSF_Estimation;
+
 import org.mitiv.TiPi.array.Array3D;
 import org.mitiv.TiPi.array.ArrayFactory;
 import org.mitiv.TiPi.array.ArrayUtils;
+import org.mitiv.TiPi.array.ByteArray;
 import org.mitiv.TiPi.array.DoubleArray;
 import org.mitiv.TiPi.array.FloatArray;
 import org.mitiv.TiPi.array.ShapedArray;
 import org.mitiv.TiPi.base.Shape;
+import org.mitiv.TiPi.base.Traits;
 import org.mitiv.TiPi.conv.WeightedConvolutionCost;
 import org.mitiv.TiPi.cost.DifferentiableCostFunction;
 import org.mitiv.TiPi.cost.HyperbolicTotalVariation;
@@ -31,6 +34,8 @@ import org.mitiv.TiPi.utils.FFTUtils;
 import org.mitiv.io.DeconvHook;
 import org.mitiv.io.NullImager;
 import org.mitiv.TiPi.weights.WeightFactory;
+import org.mitiv.TiPi.weights.WeightUpdater;
+import org.mitiv.TiPi.weights.weightsFromModel;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
@@ -87,6 +92,28 @@ public class BlindDeconvolutionCommand {
     @Option(name = "-single", usage = "Compute in single precision")
     private boolean single;
 
+
+    // Noise model args
+    private enum WeightingMethod { CONSTANT, VAR_MAP, INVERSE_VAR_MAP, COMPUTED_VAR_MAP, AUTOMATIC_VAR_MAP };
+    @Option(name = "-weighting")
+    private WeightingMethod weighting = WeightingMethod.COMPUTED_VAR_MAP;
+
+    // if weighting is VAR_MAP or INVERSE_VAR_MAP
+    @Option(name = "-map", usage = "Map of space varying noise or precision.")
+    private String mapPath;
+
+    // if weighting is COMPUTED_VAR_MAP or AUTOMATIC_VAR_MAP
+    @Option(name = "-gain", usage = "The detector gain in electrons per analog digital unit (ADU)")
+    private double gain = 1;
+
+    @Option(name = "-readoutNoise", usage = "The standard deviation of the read-out noise in electron/pixel")
+    private double sigma = 10;
+
+    // optional baddata map
+    @Option(name = "-badDataMap", usage = "A binary map with 0 for bad pixels.")
+    private String badDataPath;
+
+
     // Deconvolution args
     @Option(name = "-epsilon", usage = "threshold of Hyperbolic TV")
     private double epsilon = 0.01;
@@ -126,6 +153,90 @@ public class BlindDeconvolutionCommand {
     private static WideFieldModel buildPupil(BlindDeconvolutionCommand job, Shape psfShape) {
         WideFieldModel pupil = new WideFieldModel(psfShape, job.nPhase, job.nModulus, job.NA, job.lambda*1E-9, job.ni, job.dxy*1E-9, job.dz*1E-9, job.radial, job.single);
         return pupil;
+    }
+
+    protected static ShapedArray getWeights(BlindDeconvolutionCommand job, ShapedArray dataArray, boolean normalize) throws IllegalArgumentException, FormatException, IOException {
+
+        ShapedArray wgtArray = null;
+        Shape dataShape = dataArray.getShape();
+        ByteArray badpixArray = (ByteArray) ArrayFactory.create(Traits.BYTE, dataShape);
+        if (job.badDataPath != null) {
+            throw new IllegalArgumentException("bad data is not yet implemented");
+        } 
+        // IF dataArray has saturated pixels, do something...?
+        // if (WeightFactory.flagBads(dataArray,badpixArray,dataSeq.getChannelTypeMax(channelEV.getValue()))){
+        //     if (!isHeadLess()) {
+        //         new AnnounceFrame("Warning, saturated pixel detected, accounting them as dead pixels", "show", new Runnable() {
+        //             @Override
+        //             public void run() {
+        //                 Sequence deadSequence = new Sequence("Saturations map");
+        //                 deadSequence.copyMetaDataFrom(dataSeq, false);
+        //                 IcyImager.show(badpixArray, deadSequence, "saturations map", isHeadLess());
+        //             }
+        //         }, 3);
+        //     }
+        // }
+
+        if (job.weighting == WeightingMethod.INVERSE_VAR_MAP) {
+            // A map of weights is provided.
+            if (job.mapPath != null) {
+                wgtArray = readOMETiff(job.mapPath, job.single);
+                if (!wgtArray.getShape().equals(dataShape)) {
+                    throw new IllegalArgumentException("Weight map must have the same size than the data");
+                }
+            }
+        } else if (job.weighting == WeightingMethod.VAR_MAP) {
+            // A variance map is provided. FIXME: check shape and values. (ferreol comment)
+            if (job.mapPath != null) {
+                ShapedArray varArray = readOMETiff(job.mapPath, job.single);
+                if (!varArray.getShape().equals(dataShape)) {
+                    throw new IllegalArgumentException("Weight map must have the same size than the data");
+                }
+                wgtArray = WeightFactory.computeWeightsFromVariance(varArray);
+            }
+        } else if (job.weighting == WeightingMethod.COMPUTED_VAR_MAP) {
+            // Weights are computed given the gain and the readout noise of the detector.
+            double gamma = job.gain;
+            double sigma = job.sigma;
+            double alpha = gamma;
+            double beta = (sigma/gamma)*(sigma/gamma);
+            wgtArray = WeightFactory.computeWeightsFromData(dataArray, alpha, beta);
+        } else if (job.weighting == WeightingMethod.AUTOMATIC_VAR_MAP) {
+            // FIXME: not implemented
+            // Weights are computed from the current estimate of the data modelArray =object * PSF
+            //  the gain and the readout noise of the detector are automatically estimated from the variance of the data given the modelArray
+            // if (modelArray==null) { // without modelArray (before any deconvolution) rely on the"compute variance" method
+            //     double gamma = gain.getValue();
+            //     double sigma = noise.getValue();
+            //     double alpha = gamma;
+            //     double beta = (sigma/gamma)*(sigma/gamma);
+            //     wgtArray = WeightFactory.computeWeightsFromData(dataArray,   alpha,  beta);
+            // }else {
+            //     // wgtArray = WeightFactory.computeWeightsFromModel(dataArray,modelArray,badpixArray);
+            //     HistoMap hm = new HistoMap(modelArray, dataArray, badpixArray);
+            //     gain.setValue(hm.getAlpha());
+            //     noise.setValue(Math.sqrt(hm.getBeta())/gain.getValue());
+            //     wgtArray = hm.computeWeightMap(modelArray);
+            // }
+            throw new IllegalArgumentException("automatic_var_map is not yet implemented.");
+        } else {
+            // variance = 1
+            if (job.single) {
+                wgtArray = ArrayFactory.create(Traits.FLOAT, dataShape);
+                ((FloatArray) wgtArray).fill(1.0f);
+            }else{
+                wgtArray = ArrayFactory.create(Traits.DOUBLE, dataShape);
+                ((DoubleArray) wgtArray).fill(1.0);
+            }
+        }
+
+        // WeightFactory.removeBads(wgtArray, badpixArray); FIXME: not implemented
+
+        if (normalize) {
+            WeightFactory.normalize(wgtArray);
+        }
+
+        return wgtArray;
     }
 
 
@@ -199,13 +310,11 @@ public class BlindDeconvolutionCommand {
         DeconvolutionJob deconvolver = new DeconvolutionJob(fdata, job.mu, fprior, !job.negativity, job.nbIterDeconv, dHook, dHookfinal); // hooks to null
 
         // build wgtArray, weights
-        // Compute variance method, TODO: implement others
-        double gamma = 1.;
-        double sigma = 10.;
-        double alpha = gamma;
-        double beta = (sigma/gamma)*(sigma/gamma);
-        ShapedArray wgtArray = WeightFactory.computeWeightsFromData(dataArray, alpha, beta);
-        WeightFactory.normalize(wgtArray);
+        ShapedArray wgtArray = getWeights(job, dataArray, true);
+        WeightUpdater wghtUpdt = null;
+        if (job.weighting == WeightingMethod.AUTOMATIC_VAR_MAP) {
+            wghtUpdt = new weightsFromModel( dataArray, null);
+        }
 
         // update weights
         fdata.setWeights(wgtArray,true);
@@ -223,7 +332,7 @@ public class BlindDeconvolutionCommand {
             new int[] {job.maxIterDefocus, job.maxIterPhase, job.maxIterModulus},
             psfEstimation,
             deconvolver,
-            null, // TODO: wghtUpdt to null because Compute variance method
+            wghtUpdt,
             job.debug
         );
 
