@@ -3,6 +3,7 @@ package commands;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -344,6 +345,27 @@ public class BlindDeconvolutionCommand {
         // long elapsedTime = endTime - startTime;
         // double elapsedTimeInSeconds = (double) elapsedTime / 1_000_000_000.0;
         // System.out.println("Elapsed Time: " + elapsedTimeInSeconds + " seconds");
+
+        if (wghtUpdt != null) {
+            System.out.print("Gain found: ");
+            System.out.println(((weightsFromModel) wghtUpdt).getAlpha());
+            System.out.print("Noise found: ");
+            System.out.println(Math.sqrt(((weightsFromModel) wghtUpdt).getBeta())/((weightsFromModel) wghtUpdt).getAlpha());
+        }
+        if(job.maxIterDefocus>0){
+            System.out.print("Ni found: ");
+            System.out.println(((WideFieldModel) psfEstimation.getModel()).getNi());
+            System.out.print("Pupil shift found: ");
+            System.out.println(Arrays.toString(((WideFieldModel) psfEstimation.getModel()).getPupilShift()));
+        }
+        if(job.maxIterPhase>0){
+            System.out.print("Phase coefs found: ");
+            System.out.println(Arrays.toString(((WideFieldModel) psfEstimation.getModel()).getPhaseCoefs().getData()));
+        }
+        if(job.maxIterModulus>0){
+            System.out.print("Mudulus coefs found: ");
+            System.out.println(Arrays.toString(((WideFieldModel) psfEstimation.getModel()).getModulusCoefs().getData()));
+        }
         
         // get the psf
         pupil = ((WideFieldModel) psfEstimation.getModel());
