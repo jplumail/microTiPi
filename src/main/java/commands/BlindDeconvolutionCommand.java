@@ -358,7 +358,7 @@ public class BlindDeconvolutionCommand {
         pupil.freeMem();
 
         // save arrays
-        MainCommand.saveArrayToOMETiff(outputName, objArray, job.single);
-        MainCommand.saveArrayToOMETiff(psfName, ArrayUtils.roll(pupil.getPsf()), job.single);
+        MainCommand.saveArrayToOMETiff(outputName, objArray);
+        MainCommand.saveArrayToOMETiff(psfName, ArrayUtils.roll(pupil.getPsf()));
     }
 }

@@ -320,7 +320,7 @@ public class EdgePreservingDeconvolutionCommand {
             if (job.crop) {
                 arr = ArrayUtils.crop(arr, solver.getData().getShape());
             }
-            MainCommand.saveArrayToOMETiff(outputName, arr, false);;
+            MainCommand.saveArrayToOMETiff(outputName, arr);
         } catch (final IOException e) {
             if (job.debug) {
                 e.printStackTrace();
