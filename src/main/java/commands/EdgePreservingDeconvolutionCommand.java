@@ -39,9 +39,9 @@ import org.mitiv.TiPi.array.ArrayUtils;
 import org.mitiv.TiPi.array.ShapedArray;
 import org.mitiv.TiPi.base.Shape;
 import org.mitiv.TiPi.invpb.EdgePreservingDeconvolution;
-import org.mitiv.TiPi.io.DataFormat;
 import org.mitiv.TiPi.optim.OptimTask;
 import org.mitiv.TiPi.utils.FFTUtils;
+import org.mitiv.microTiPi.epifluorescence.WideFieldModel;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
@@ -56,6 +56,31 @@ public class EdgePreservingDeconvolutionCommand {
 
     @Option(name = "-psf", usage = "Name of point spread function file.", metaVar = "FILENAME")
     private String psfName = null;
+
+    // WidefieldModel args
+    @Option(name = "-nPhase", usage = "Number of zernike describing the pupil phase", metaVar = "N")
+    private int nPhase = 19;
+
+    @Option(name = "-nModulus", usage = "Number of zernike describing the pupil modulus", metaVar = "N")
+    private int nModulus = 0;
+
+    @Option(name = "-NA", usage = "Numerical aperture", metaVar = "NA")
+    private double NA = 1.4;
+
+    @Option(name = "-lambda", usage = "Wavelength in nm", metaVar = "lambda")
+    private double lambda = 540; // 540nm
+
+    @Option(name = "-ni", usage = "Refractive index", metaVar = "ni")
+    private double ni = 1.518;
+
+    @Option(name = "-dxy", usage = "Lateral pixel size in nm", metaVar = "dxy")
+    private double dxy = 1.;
+
+    @Option(name = "-dz", usage = "Axial pixel size in nm", metaVar = "dz")
+    private double dz = 1.;
+
+    @Option(name = "-radial", usage = "Radial option")
+    private boolean radial;
 
     @Option(name = "-normalize", usage = "Normalize the point spread function.")
     private boolean normalizePSF = false;
@@ -171,6 +196,9 @@ public class EdgePreservingDeconvolutionCommand {
             solver.setData(MainCommand.loadData(inputName, job.single));
             if (job.psfName != null) {
                 solver.setPSF(MainCommand.loadData(job.psfName, job.single), job.normalizePSF);
+            } else {
+                WideFieldModel pupil = new WideFieldModel(solver.getData().getShape(), job.nPhase, job.nModulus, job.NA, job.lambda*1E-9, job.ni, job.dxy*1E-9, job.dz*1E-9, job.radial, job.single);
+                solver.setPSF(pupil.getPsf(), job.normalizePSF);
             }
 
             // Deal with the weights.
@@ -248,42 +276,42 @@ public class EdgePreservingDeconvolutionCommand {
             solver.setSaveBest(true);
 
             OptimTask task = solver.start();
-            while (true) {
-                if (task == OptimTask.ERROR) {
-                    fatal(solver.getReason());
-                }
-                if (task == OptimTask.WARNING) {
-                    warn(solver.getReason());
-                    break;
-                }
-                if (job.verbose && (task == OptimTask.NEW_X || task == OptimTask.FINAL_X)) {
-                    double elapsed = solver.getElapsedTime();
-                    int evaluations = solver.getEvaluations();
-                    int iterations = solver.getIterations();
-                    solver.getRestarts();
-                    job.stream.format("iter: %4d    eval: %4d    time: %7.3f s.    fx = %22.16e    |gx| = %8.2e\n",
-                            iterations, evaluations,
-                            elapsed, solver.getCost(),
-                            solver.getGradient().norm2());
-                    if (task == OptimTask.FINAL_X) {
-                        job.stream.format("Total time in cost function: %.3f s (%.3f ms/eval.)\n",
-                                elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
-                    }
-                    // if (fdata instanceof WeightedConvolutionCost) {
-                    //     WeightedConvolutionCost f = fdata;
-                    //     elapsed = f.getElapsedTimeInFFT();
-                    //     System.out.format("Total time in FFT: %.3f s (%.3f ms/eval.)\n",
-                    //         elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
-                    //     elapsed = f.getElapsedTime() - elapsed;
-                    //     System.out.format("Total time in other parts of the convolution operator: %.3f s (%.3f ms/eval.)\n",
-                    //         elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
-                    // }
-                }
-                if (task == OptimTask.FINAL_X) {
-                    break;
-                }
-                task = solver.iterate();
-            }
+             while (true) {
+                 if (task == OptimTask.ERROR) {
+                     fatal(solver.getReason());
+                 }
+                 if (task == OptimTask.WARNING) {
+                     warn(solver.getReason());
+                     break;
+                 }
+                 if (job.verbose && (task == OptimTask.NEW_X || task == OptimTask.FINAL_X)) {
+                     double elapsed = solver.getElapsedTime();
+                     int evaluations = solver.getEvaluations();
+                     int iterations = solver.getIterations();
+                     solver.getRestarts();
+                     job.stream.format("iter: %4d    eval: %4d    time: %7.3f s.    fx = %22.16e    |gx| = %8.2e\n",
+                             iterations, evaluations,
+                             elapsed, solver.getCost(),
+                             solver.getGradient().norm2());
+                     if (task == OptimTask.FINAL_X) {
+                         job.stream.format("Total time in cost function: %.3f s (%.3f ms/eval.)\n",
+                                 elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
+                     }
+                     // if (fdata instanceof WeightedConvolutionCost) {
+                     //     WeightedConvolutionCost f = fdata;
+                     //     elapsed = f.getElapsedTimeInFFT();
+                     //     System.out.format("Total time in FFT: %.3f s (%.3f ms/eval.)\n",
+                     //         elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
+                     //     elapsed = f.getElapsedTime() - elapsed;
+                     //     System.out.format("Total time in other parts of the convolution operator: %.3f s (%.3f ms/eval.)\n",
+                     //         elapsed, (evaluations > 0 ? 1e3*elapsed/evaluations : 0.0));
+                     // }
+                 }
+                 if (task == OptimTask.FINAL_X) {
+                     break;
+                 }
+                 task = solver.iterate();
+             }
         } catch (RuntimeException e) {
             fatal(e.getMessage());
         }
